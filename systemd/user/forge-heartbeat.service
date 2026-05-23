@@ -1,0 +1,6 @@
+[Unit]
+Description=ForgeOS heartbeat snapshot
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/forge-heartbeat
