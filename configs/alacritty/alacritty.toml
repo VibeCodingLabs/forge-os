@@ -1,5 +1,5 @@
 [window]
-opacities = 0.94
+opacity = 0.94
 padding = { x = 8, y = 8 }
 dynamic_padding = true
 
