@@ -1,0 +1,26 @@
+# ForgeOS Ghostnode ZSH
+export ZDOTDIR="$HOME"
+export FORGE_HOME="${FORGE_HOME:-$HOME/.forge-os}"
+export PATH="$HOME/.local/bin:$HOME/go/bin:$PATH"
+
+HISTFILE="$HOME/.zsh_history"
+HISTSIZE=100000
+SAVEHIST=100000
+setopt appendhistory sharehistory hist_ignore_dups hist_ignore_space extended_history inc_append_history
+setopt autocd correct interactivecomments prompt_subst
+
+autoload -Uz compinit
+zstyle ':completion:*' menu select
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
+zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+compinit
+
+[[ -d "$HOME/.local/share/zsh/plugins/zsh-completions/src" ]] && fpath=("$HOME/.local/share/zsh/plugins/zsh-completions/src" $fpath)
+[[ -f "$HOME/.local/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh" ]] && source "$HOME/.local/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
+[[ -f "$HOME/.local/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]] && source "$HOME/.local/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+
+command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
+command -v direnv >/dev/null 2>&1 && eval "$(direnv hook zsh)"
+command -v starship >/dev/null 2>&1 && eval "$(starship init zsh)"
+
+[[ -f "$HOME/.config/zsh/forge.zsh" ]] && source "$HOME/.config/zsh/forge.zsh"
