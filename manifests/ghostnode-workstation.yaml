@@ -1,5 +1,5 @@
 profile: ghostnode-secure-workstation
-summary: Secure AI automation workstation with compositor lab, terminals, scanners, AI SDKs, and observability.
+summary: Secure AI automation workstation with compositor lab, terminals, scanners, AI SDKs, observability, and rich command-center UX.
 categories:
   recovery_base:
     description: Core packages required after a clean Debian install.
@@ -18,6 +18,39 @@ categories:
       - yq
       - openssh-client
       - openssh-server
+  command_center_ux:
+    description: Shell UX, Go Bubble Tea/Lip Gloss TUI, Python Rich/Textual color stack, and productivity prompt.
+    apt:
+      - zsh
+      - golang-go
+      - fzf
+      - ripgrep
+      - fd-find
+      - eza
+      - bat
+      - zoxide
+      - starship
+      - direnv
+      - fonts-powerline
+    go:
+      - github.com/charmbracelet/bubbletea
+      - github.com/charmbracelet/lipgloss
+    python:
+      - rich
+      - textual
+      - typer
+      - click
+      - prompt-toolkit
+      - questionary
+      - halo
+      - yaspin
+      - blessed
+      - colorama
+      - pygments
+    zsh_plugins:
+      - zsh-users/zsh-autosuggestions
+      - zsh-users/zsh-syntax-highlighting
+      - zsh-users/zsh-completions
   terminals:
     description: Command-center terminals, multiplexers, file managers, and shell productivity.
     apt:
