@@ -1,0 +1,123 @@
+profile: ghostnode-secure-workstation
+summary: Secure AI automation workstation with compositor lab, terminals, scanners, AI SDKs, and observability.
+categories:
+  recovery_base:
+    description: Core packages required after a clean Debian install.
+    apt:
+      - git
+      - curl
+      - wget
+      - ca-certificates
+      - gnupg
+      - lsb-release
+      - build-essential
+      - pkg-config
+      - unzip
+      - zip
+      - jq
+      - yq
+      - openssh-client
+      - openssh-server
+  terminals:
+    description: Command-center terminals, multiplexers, file managers, and shell productivity.
+    apt:
+      - wezterm
+      - kitty
+      - alacritty
+      - foot
+      - tmux
+      - zellij
+      - ranger
+      - mc
+      - lf
+      - yazi
+      - ncdu
+      - btop
+      - glances
+      - fzf
+      - ripgrep
+      - fd-find
+      - eza
+      - bat
+      - zoxide
+      - starship
+  compositor_lab:
+    description: i3 rescue, Sway wlroots baseline, and Wayland desktop tools.
+    apt:
+      - i3
+      - sway
+      - waybar
+      - wofi
+      - rofi
+      - mako
+      - grim
+      - slurp
+      - xwayland
+      - xdg-desktop-portal
+      - xdg-desktop-portal-wlr
+      - dbus-user-session
+      - pipewire
+      - wireplumber
+  security_baseline:
+    description: Defensive hardening, malware checks, rootkit checks, and audit tools.
+    apt:
+      - ufw
+      - fail2ban
+      - auditd
+      - audispd-plugins
+      - apparmor
+      - apparmor-utils
+      - lynis
+      - aide
+      - rkhunter
+      - chkrootkit
+      - clamav
+      - clamav-daemon
+      - yara
+      - debsecan
+      - unattended-upgrades
+      - needrestart
+  scanners:
+    description: Repo, secret, dependency, and supply-chain scanners.
+    apt:
+      - git-secrets
+      - shellcheck
+      - semgrep
+      - bandit
+      - pip-audit
+      - gitleaks
+      - trufflehog
+      - syft
+      - grype
+      - osv-scanner
+  ai_sdk:
+    description: AI and agent development SDK lane.
+    python:
+      - openai
+      - anthropic
+      - litellm
+      - pydantic
+      - pydantic-ai
+      - langchain
+      - langgraph
+      - chromadb
+      - fastapi
+      - uvicorn
+      - httpx
+      - rich
+      - textual
+      - typer
+    npm:
+      - pnpm
+      - '@modelcontextprotocol/inspector'
+  browser_automation:
+    description: Browser testing and capture lane.
+    apt:
+      - chromium
+      - firefox-esr
+      - xvfb
+      - mitmproxy
+  notes:
+    - Keep secrets out of this public repo.
+    - Use HP14 as the lab machine before promoting settings to the main workstation.
+    - Treat offensive security tools as authorized-testing-only tools.
