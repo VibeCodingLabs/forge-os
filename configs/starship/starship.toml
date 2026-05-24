@@ -1,0 +1,38 @@
+format = "$directory$git_branch$git_status$nodejs$python$rust$golang$cmd_duration$line_break$character"
+add_newline = true
+
+[directory]
+style = "bold cyan"
+truncation_length = 4
+truncate_to_repo = false
+
+[git_branch]
+style = "bold purple"
+symbol = " "
+
+[git_status]
+style = "bold red"
+
+[character]
+success_symbol = "[➜](bold green)"
+error_symbol = "[✗](bold red)"
+
+[cmd_duration]
+min_time = 500
+format = "[$duration](yellow) "
+
+[python]
+symbol = "py "
+style = "bold yellow"
+
+[nodejs]
+symbol = "node "
+style = "bold green"
+
+[rust]
+symbol = "rs "
+style = "bold red"
+
+[golang]
+symbol = "go "
+style = "bold cyan"
