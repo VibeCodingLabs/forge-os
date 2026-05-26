@@ -9,7 +9,7 @@ ForgeOS is the post-wipe recovery and command-center bootstrap layer for rebuild
 After a clean OS install, the minimum path is:
 
 1. Install git, curl, and certificates.
-2. Clone `https://github.com/VibeCodingLabs/forge-os.git`.
+2. Clone this repository or your renamed public mirror.
 3. Run `chmod +x install.sh`.
 4. Run `./install.sh`.
 5. Use the interactive menu to install layers.
@@ -44,7 +44,7 @@ After a clean OS install, the minimum path is:
 
 - Store terminal themes under `configs/`.
 - Store future app themes under `themes/`.
-- Prefer okLCH design tokens for Forge Symphony / web UI work.
+- Prefer okLCH design tokens for web UI work.
 
 ### 6. Agent sandboxing lane
 
