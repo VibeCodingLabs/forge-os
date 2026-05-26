@@ -1,163 +1,155 @@
-![Build](https://img.shields.io/badge/build-passing-brightgreen?style=for-the-badge)
-![Version](https://img.shields.io/badge/version-0.1.0-blue?style=for-the-badge)
-![License](https://img.shields.io/badge/license-MIT-purple?style=for-the-badge)
-![Status](https://img.shields.io/badge/status-active-success?style=for-the-badge)
-![Platform](https://img.shields.io/badge/platform-cross--platform-black?style=for-the-badge)
-![ForgeOS](https://img.shields.io/badge/ForgeOS-ONLINE-0A1A3F?style=for-the-badge\&logo=vercel\&logoColor=00E5FF)
-![Agents](https://img.shields.io/badge/Agents-ACTIVE-00E5FF?style=for-the-badge)
-![Execution](https://img.shields.io/badge/Execution-ENGINE_READY-0A1A3F?style=for-the-badge)
-![LLM Wiki](https://img.shields.io/badge/LLM_Wiki-SYNCED-00E5FF?style=for-the-badge)
-![Evolution](https://img.shields.io/badge/Self_Evolution-ENABLED-purple?style=for-the-badge)
-![Security](https://img.shields.io/badge/Security-HARDENED-black?style=for-the-badge)
-![Next.js](https://img.shields.io/badge/Next.js-Framework-black?style=for-the-badge\&logo=nextdotjs)
-![FastAPI](https://img.shields.io/badge/FastAPI-Backend-green?style=for-the-badge\&logo=fastapi)
-![Electron](https://img.shields.io/badge/Electron-IDE-blue?style=for-the-badge\&logo=electron)
-![Python](https://img.shields.io/badge/Python-Core-yellow?style=for-the-badge\&logo=python)
-![React](https://img.shields.io/badge/React-UI-blue?style=for-the-badge\&logo=react)
-![Auto Mode](https://img.shields.io/badge/gpf_auto-FULL_PIPELINE-orange?style=for-the-badge)
-![Talk Mode](https://img.shields.io/badge/gpf_talk-INTERACTIVE_AI-blue?style=for-the-badge)
-![Map Mode](https://img.shields.io/badge/gpf_map-VISUAL_GRAPH-purple?style=for-the-badge)
-![RAG](https://img.shields.io/badge/Hybrid_RAG-ENABLED-success?style=for-the-badge)
-![GraphRAG](https://img.shields.io/badge/GraphRAG-ACTIVE-blueviolet?style=for-the-badge)
-![CLI](https://img.shields.io/badge/CLI-READY-black?style=for-the-badge)
-![TUI](https://img.shields.io/badge/TUI-TEXTUAL-green?style=for-the-badge)
-![Forge Core](https://img.shields.io/badge/Forge-Core-00E5FF?style=for-the-badge\&color=00E5FF\&labelColor=0A1A3F)
-![Execution](https://img.shields.io/badge/Execution-LIVE-gradient?style=for-the-badge)
-![AI Engine](https://img.shields.io/badge/AI-ENGINE-ff00ff?style=for-the-badge)
+# ForgeOS
 
+ForgeOS is the public post-wipe recovery and command-center bootstrap repo for rebuilding a Debian-based AI automation workstation from a clean install.
 
+It is designed for Ghostnode / VibeCodingLabs operator machines, starting with the HP14 lab station, then promoting stable layers to the main workstation.
 
-# 🔥 ForgeOS (Golden Path Forge)
+## What this repo does
 
-> 🧠 Agent Operating System
-> 💻 Full-stack AI Dev Environment
-> 🔁 Self-evolving Execution Engine
+ForgeOS provides an interactive installer for:
 
----
+- Debian recovery base packages
+- terminal UX and productivity tools
+- ZSH autocomplete and syntax highlighting
+- Bubble Tea / Lip Gloss Go TUI tooling
+- Python Rich / Textual color UI tooling
+- Kitty, Alacritty, WezTerm, tmux, Zellij, Ranger, Yazi, and file-manager tooling
+- i3, Sway, Wayland, and compositor lab dependencies
+- Rust, Go, Python, Node, pnpm, and Tauri 2 prerequisites
+- security hardening and defensive scanners
+- secret scanning and supply-chain tooling
+- browser automation and API discovery prerequisites
+- Obsidian operator vault setup
+- local observability timers and ForgeOS logs
 
-## 🚀 What is ForgeOS?
+This repo is not a secrets store. Do not commit API keys, tokens, SSH keys, bounty evidence, private reports, cloud credentials, customer data, or personal identity material.
 
-ForgeOS is a next-generation AI operating system designed to:
+## Quick recovery path after a clean Debian install
 
-* Accumulate knowledge (LLM Wiki)
-* Retrieve context (Hybrid RAG + GraphRAG)
-* Reason about tasks (LLM + Planning Engine)
-* Execute deterministically (Execution Engine)
-* Continuously improve (Self-Evolution Engine)
+Run this after the OS is installed and networking works:
 
----
+```bash
+sudo apt-get update
+sudo apt-get install -y git ca-certificates curl
 
-## ⚙️ Core Architecture
-
-```
-INPUT → CONTEXT → PLAN → EXECUTE → OBSERVE → SCORE → EVOLVE
+git clone https://github.com/VibeCodingLabs/forge-os.git
+cd forge-os
+chmod +x install.sh
+./install.sh
 ```
 
----
+## Recommended HP14 test order
 
-## 🧩 System Layers
+Do not install the full workstation stack first.
 
-* CLI (`gpf`)
-* TUI (Textual)
-* Web Dashboard (Next.js)
-* Desktop IDE (Electron)
+Use the HP14 as the lab machine and install in this order:
 
----
+1. Preflight + disk report
+2. Minimal Recovery Base
+3. Install Command Center UX stack
+4. Test `forge-tui`
+5. HP14 Lab Stack
+6. Ghostnode Secure Workstation only after the earlier steps work
 
-## 🧠 Engines
+The full workstation profile installs many more packages, so it should be treated as a promotion target, not the first smoke test.
 
-* Context Engine (memory + embeddings)
-* Planner (task decomposition)
-* Execution Manager (deterministic runtime)
-* Insight Engine (post-tool reasoning)
-* Ambiguity Engine (clarification system)
-* Evolution Engine (self-improving skills)
+## Main menu
 
----
+The installer currently exposes these top-level actions:
 
-## 📦 Repo Structure
+- Preflight + disk report
+- Minimal Recovery Base
+- HP14 Lab Stack
+- Ghostnode Secure Workstation
+- Custom Modules
+- Show manifests
+- Copy terminal configs
+- Enable observability timers
+- Install Command Center UX stack
+- Launch Forge TUI if installed
 
-```
-apps/
-  web/        # Dashboard (Next.js)
-  ide/        # Electron IDE
-  api/        # Backend (FastAPI)
+## Custom modules
 
-cli/          # CLI entrypoint
-tui/          # Terminal UI
+The custom module lane includes:
 
-core/         # Engine modules
-skills/       # Modular skill system
+- Recovery base
+- Terminal/session stack
+- Desktop/compositor lab
+- Dev runtime
+- Tauri 2 desktop stack
+- Security baseline
+- Repo/secrets/code scanners
+- Web security lab tools
+- AI SDK stack
+- Browser automation
+- Obsidian knowledge vault
+- ZSH productivity shell
+- Bubble Tea / Lip Gloss Go TUI stack
+- Python Rich / Textual color UI stack
+- Full Command Center UX stack
 
-data/
-  raw/
-  embeddings/
-  wiki/
-  logs/
+## Repo layout
 
-auth/         # OAuth + sessions
-billing/      # Stripe + credits
-
-references/
-  architecture-inspiration/
-```
-
----
-
-## 🔥 Commands
-
-```
-gpf auto   # Full pipeline execution
-gpf talk   # Interactive intelligence mode
-gpf map    # Visual system graph
-gpf plan   # Generate plan
-gpf exec   # Execute tasks
-gpf eval   # Evaluate performance
-gpf evolve # Improve system
-```
-
----
-
-## 🔐 Auth & Billing
-
-* OAuth (GitHub / Google)
-* Stripe integration
-* Credit-based usage system
-
----
-
-## 🧠 Key Features
-
-* Self-evolving skills
-* Insight-driven reasoning
-* Persistent LLM Wiki
-* Hybrid + Graph RAG
-* Multi-interface control (CLI + TUI + Web + IDE)
-
----
-
-## ⚠️ Internal References
-
-All architectural inspirations are documented internally:
-
-```
-/references/architecture-inspiration/
+```text
+install.sh                         # bootstrap entrypoint
+bin/forge-menu.sh                  # interactive shell menu
+cmd/forge-tui/main.go              # Bubble Tea / Lip Gloss TUI skeleton
+configs/                           # terminal, shell, theme, and app configs
+configs/zsh/                       # ForgeOS ZSH profile and helpers
+configs/starship/                  # Starship prompt config
+manifests/                         # install profile manifests
+scripts/                           # installer modules and helpers
+systemd/user/                      # local user services and timers
+docs/                              # task maps, roadmaps, and supporting docs
+FORGE.md                           # Master Operating Agreement
+AGENTS.md                          # agent conduct and orchestration rules
+SECURITY.md                        # security policy and safe-use boundaries
 ```
 
-No external framework naming is exposed in production.
+## Command Center UX lane
 
----
+The Command Center UX lane installs the tooling needed to make the terminal feel like a real operator console:
 
-## 🚀 Status
+- ZSH
+- zsh-autosuggestions
+- zsh-syntax-highlighting
+- zsh-completions
+- Starship
+- fzf
+- zoxide
+- direnv
+- Go
+- Bubble Tea
+- Lip Gloss
+- Rich
+- Textual
+- Typer
+- prompt-toolkit
+- questionary
+- yaspin / halo style spinner libraries
 
-⚡ Initial scaffold complete
-🧠 Core engine in progress
-🔥 Full system under active development
+After installation, the Go TUI should be available as:
 
----
+```bash
+forge-tui
+```
 
-## 🧠 Vision
+## Operating agreement
 
-ForgeOS is not just a tool.
+All human and agent work in this repo is governed by `FORGE.md`.
 
-It is a **platform for building intelligent systems that think, act, and improve themselves.**
+Read it before making changes. It defines the expected quality standard, agent conduct, documentation rules, security expectations, and ethical foundation for ForgeOS.
+
+## Safety notes
+
+- Use authorized testing only.
+- Keep offensive security tools behind responsible-use boundaries.
+- Do not run untrusted install scripts without review.
+- Prefer Debian packages where possible.
+- Treat external installers as supply-chain risk.
+- Keep privileged actions explicit, logged, and reversible.
+- Keep private evidence and credentials out of the repo.
+
+## Status
+
+ForgeOS is under active development. The HP14 Debian station is the intended smoke-test target before promoting profiles to the main workstation.
