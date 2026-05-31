@@ -82,3 +82,10 @@ After a clean OS install, the minimum path is:
 - Add GitHub Actions for shellcheck and markdown lint.
 - Add Tauri 2 app scaffold under `apps/desktop`.
 - Add Rust daemon scaffold under `crates/forge-daemon`.
+
+## Open tickets
+
+Scoped work-in-progress items live in `docs/tickets/`. Each ticket is a
+single design contract — what + why + acceptance — not the implementation.
+
+- [FOS-001](tickets/FOS-001-forge-install-gui.md) — `forge-install`: unified TUI installer for `.deb`, `.AppImage`, PPA / third-party apt repos, and GitHub release binaries. Owns the install ledger at `~/.forge-os/installs.sqlite`. (scoped, not started)
