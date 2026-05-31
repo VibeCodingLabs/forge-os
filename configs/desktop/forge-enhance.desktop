@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Forge Enhance
+GenericName=Prompt Enhancer
+Comment=v0-style "enhance my prompt" button — pops a text box, rewrites the prompt via a free LLM API, copies the result
+Exec=forge-enhance-popup
+Icon=accessories-text-editor
+Terminal=false
+Categories=Utility;Development;TextEditor;
+Keywords=prompt;llm;ai;enhance;rewrite;
+StartupNotify=false
