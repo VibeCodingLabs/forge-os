@@ -1,240 +1,210 @@
 # Pop!_OS → Debian 13 + River — Migration Checklist
 
-Step-by-step for a safe wipe + clean re-install + return to operator-ready
-state. Tuned for the HP14 lab station and the main workstation.
+## Mental model
 
-## Pre-wipe (do these BEFORE you reboot to the Debian installer)
+This is **not a restore**. The plan is:
 
-### 1. Capture today's delta
+1. **Archive** the old system to `/mnt/vault/` (one final snapshot)
+2. **Wipe** the OS disk and install Debian 13 cleanly
+3. **Bootstrap** fresh: clone `forge-os`, run `install.sh`, re-key, done
+4. **Mine the archive later** — when you actually want something from the
+   old box, you reach into vault and pull just that one thing. You do
+   *not* sync your old home back. The bloat stays in vault.
 
-Most data is already on `/mnt/vault/backups/phantom-<YYYY-MM-DD>-prewipe/`
-from a prior `backup-rsync` run. Today is about the **delta since that
-snapshot**. Specifically:
-
-- [ ] Every git repo with uncommitted / unpushed / stash work — pushed or
-      stashed-and-pushed to its remote. Run from `~`:
-      ```bash
-      find . -name .git -type d -prune | while read -r r; do
-        p="$(dirname "$r")"
-        d=$(git -C "$p" status --porcelain | wc -l)
-        u=$(git -C "$p" log --branches --not --remotes --oneline | wc -l)
-        s=$(git -C "$p" stash list | wc -l)
-        [ "$d" -gt 0 ] || [ "$u" -gt 0 ] || [ "$s" -gt 0 ] && \
-          echo "DIRTY: $p (dirty=$d unpushed=$u stash=$s)"
-      done
-      ```
-- [ ] Anything not in a git repo that you'd cry over — copy to
-      `/mnt/vault/handoff/` (survives the wipe; lives outside `~`).
-- [ ] Browser bookmarks / open tabs / extensions exported. Firefox:
-      Settings → Sync → confirm last sync time. Brave: about://bookmarks
-      → Export.
-- [ ] Active terminal `tmux` / `zellij` sessions you care about — capture
-      `tmux capture-pane -pS -10000 > ~/session-<date>.txt`.
-
-### 2. Inventory what's irreplaceable
-
-These are small but you cannot regenerate them after a wipe:
-
-- [ ] `~/.ssh/` — keys + known_hosts + config
-- [ ] `~/.gnupg/` — GPG keys (export with `gpg --export-secret-keys --armor`
-      to a file in `/mnt/vault/handoff/` rather than relying on dir copy)
-- [ ] `~/.gitconfig`, `~/.netrc`, `~/.pgpass`
-- [ ] `~/.config/gh/hosts.yml` — GitHub CLI auth
-- [ ] `~/.aws/credentials`, `~/.docker/config.json`, `~/.kube/config`
-- [ ] `~/.zsh_history`, `~/.bash_history`, `~/.python_history`
-- [ ] `~/.claude/` — Claude Code memory + skills + projects state
-- [ ] `~/.npmrc`, `~/.cargo/credentials.toml`, `~/.pypirc`
-- [ ] Wireguard / VPN configs from `/etc/wireguard/` (root)
-- [ ] Any local SQLite databases NOT under a git repo (check `find ~ -name
-      "*.sqlite" -not -path "*/node_modules/*" -not -path "*/.cache/*"`)
-
-### 3. Capture environment state for re-keying
-
-- [ ] `gh auth status` — confirm logged-in account; you'll re-auth post-wipe
-- [ ] `aws configure list-profiles` — list of profiles to recreate
-- [ ] `flatpak list --app` — list of flatpaks to reinstall
-- [ ] `apt list --installed > ~/apt-installed-prewipe.txt` — package list
-      (move to `/mnt/vault/handoff/`)
-- [ ] `dpkg --get-selections > ~/dpkg-selections-prewipe.txt`
-- [ ] `code --list-extensions > ~/vscode-extensions-prewipe.txt` (if applicable)
-- [ ] Browser extension list (manual: settings → extensions → screenshot)
-
-### 4. Run the full audit one more time
-
-```bash
-bash /tmp/audit-home.sh
-cat /tmp/audit-home-$(date +%Y-%m-%d).md
-```
-
-Read the **DIRTY** section carefully. Anything that's still red is
-unfinished business — decide for each: commit, push, stash-to-vault, or
-deliberately drop.
-
-### 5. Confirm `/mnt/vault` mount survives
-
-```bash
-# /mnt/vault should be its own block device, not a bind mount over ~/
-lsblk
-findmnt /mnt/vault
-```
-
-If `/mnt/vault` is on a USB enclosure, **unplug it physically before
-booting the Debian installer** so the installer can't accidentally
-target the wrong disk. Re-plug after install completes.
-
-### 6. Take a final fresh snapshot
-
-```bash
-bash backup-rsync.sh    # or your equivalent — see backup-rsync skill
-# writes to /mnt/vault/backups/phantom-$(date +%Y-%m-%d-%H%M)-prewipe/
-```
-
-This is the rollback path. If anything goes wrong on Debian, you can
-boot a live USB, mount /mnt/vault, and restore.
+The vault snapshot is a **museum**, not a backup-you-restore-from. It's
+there so you can find old files when you need them, not so you can
+recreate the old chaos on the new machine.
 
 ---
 
-## During wipe / install
+## Before the wipe
 
-- [ ] Boot Debian 13 installer (netinst or live image, your call)
-- [ ] **Do NOT format `/mnt/vault`**. In the partitioner, leave that
-      device untouched. Only format the OS disk.
-- [ ] Set hostname matching `~/.gitconfig` so signed commits stay coherent
-- [ ] Skip the "additional software" picker — minimal install is best;
-      ForgeOS will bring everything else.
+### 1. Take one final delta snapshot to vault
+
+```bash
+bash backup-rsync.sh    # writes to /mnt/vault/backups/phantom-$(date +%Y-%m-%d-%H%M)-prewipe/
+```
+
+Today's delta (anything that happened since
+`/mnt/vault/backups/phantom-2026-05-30-prewipe/`) lands in vault and is
+preserved forever. This is the *only* archive step — everything else is
+already in earlier snapshots.
+
+### 2. Export the 2-3 things that genuinely can't be regenerated
+
+Most "irreplaceable" stuff (gh auth, AWS profiles, npm tokens, etc.) is
+easier to re-auth fresh than to carefully copy across machines. The
+exceptions — actual cryptographic material you generated yourself — go
+into a small handoff dir:
+
+```bash
+mkdir -p /mnt/vault/handoff
+cp -a ~/.ssh                       /mnt/vault/handoff/    # private SSH keys
+gpg --export-secret-keys --armor > /mnt/vault/handoff/gpg-secret-keys.asc
+gpg --export-ownertrust          > /mnt/vault/handoff/gpg-ownertrust.txt
+chmod 600 /mnt/vault/handoff/gpg-* /mnt/vault/handoff/.ssh/*
+```
+
+Anything else (`.gitconfig`, `.zshrc`, browser bookmarks, dotfiles in
+general) is small enough to **rewrite intentionally on the new system**
+or pull selectively from the snapshot later. Don't pre-stage it.
+
+### 3. Confirm vault is its own block device (won't be wiped)
+
+```bash
+findmnt /mnt/vault          # confirm it's a separate device, not a bind mount
+lsblk                       # confirm which device the OS is on vs vault
+```
+
+If `/mnt/vault` is on a USB enclosure, **physically unplug it before
+booting the installer** so the partitioner can't see it. Re-plug after
+Debian is installed and you're logged in.
+
+### 4. (Optional) Push any forge-os / forge-autoresearch work-in-progress
+
+Today's work is already on GitHub — `forge-os` is at commit `feb73fc` on
+main, and the three forge-autoresearch PRs (#1, #2, #3) are pushed. If
+you've made any uncommitted edits since reading this, `git push` them
+now so they don't need to be mined from vault later.
 
 ---
 
-## Post-wipe — first 30 minutes
+## During the wipe
 
-### 1. Network + base tools
+- [ ] Boot Debian 13 installer (netinst is fine)
+- [ ] **Do NOT format `/mnt/vault`**. In the partitioner, the OS disk is
+      the only target. Leave the vault device untouched.
+- [ ] Skip the "additional software" picker. Minimal install. ForgeOS
+      brings the rest.
+- [ ] Set the hostname you actually want — this is a clean-slate moment,
+      pick something deliberate.
+
+---
+
+## After the wipe — operator-ready in ~30 min
+
+### 1. Base tools
 
 ```bash
-sudo apt-get update
-sudo apt-get install -y git ca-certificates curl
+sudo apt update && sudo apt install -y git ca-certificates curl
 ```
 
-### 2. Re-mount vault + restore irreplaceable dotfiles
+### 2. Re-mount vault (read-only is safest until you trust the new env)
 
 ```bash
 sudo mkdir -p /mnt/vault
-sudo mount /dev/disk/by-label/VAULT /mnt/vault   # adjust to your label
-ls /mnt/vault/backups/                            # confirm snapshots present
+sudo mount -o ro /dev/disk/by-label/VAULT /mnt/vault    # adjust label
+ls /mnt/vault/backups/                                  # confirm snapshots present
+ls /mnt/vault/handoff/                                  # confirm SSH + GPG export
 ```
 
-Restore ONLY the small irreplaceable things first (don't sync the whole
-home — let ForgeOS install the rest):
+### 3. Bring back ONLY the cryptographic essentials
 
 ```bash
-LATEST=/mnt/vault/backups/phantom-2026-05-30-prewipe   # or newer
-mkdir -p ~/.ssh ~/.gnupg ~/.config/gh ~/.aws
-cp -a $LATEST/.ssh/.        ~/.ssh/
-cp -a $LATEST/.gnupg/.      ~/.gnupg/
-cp -a $LATEST/.gitconfig    ~/
-cp -a $LATEST/.config/gh/.  ~/.config/gh/
-cp -a $LATEST/.aws/.        ~/.aws/
-chmod 700 ~/.ssh ~/.gnupg
-chmod 600 ~/.ssh/* ~/.gnupg/*
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+sudo cp -a /mnt/vault/handoff/.ssh/. ~/.ssh/
+sudo chown -R $USER:$USER ~/.ssh
+chmod 600 ~/.ssh/*
+
+gpg --import /mnt/vault/handoff/gpg-secret-keys.asc
+gpg --import-ownertrust /mnt/vault/handoff/gpg-ownertrust.txt
 ```
 
-### 3. Clone + bootstrap ForgeOS
+That's it for "restore." Everything else, you re-auth fresh.
+
+### 4. Clone + bootstrap forge-os
 
 ```bash
-cd ~
-git clone https://github.com/VibeCodingLabs/forge-os.git
-cd forge-os
-chmod +x install.sh
-./install.sh
+cd ~ && git clone https://github.com/VibeCodingLabs/forge-os.git
+cd forge-os && chmod +x install.sh && ./install.sh
 ```
 
 Pick **Minimal Recovery Base** first. Only after that smoke-tests, run
-**HP14 Lab Stack** (this machine) or **Ghostnode Secure Workstation**.
+**HP14 Lab Stack** or the workstation profile.
 
-### 4. Re-key
+### 5. Re-key from the master env catalog
 
 ```bash
 cp env.master.example ~/.env.forge
 chmod 600 ~/.env.forge
-# edit ~/.env.forge — fill in the keys you actually use
-# (the file has sign-up URLs above each variable for the ones you forgot)
+$EDITOR ~/.env.forge          # fill in only the keys you actively use
+                              # (the file has sign-up URLs above every var)
 echo 'set -a; source ~/.env.forge; set +a' >> ~/.zshrc
 ```
 
-Then `source ~/.zshrc` (or open a new terminal) and verify:
+This is the deliberate part — you're choosing which providers come
+forward, not inheriting all 75 from the old box.
 
-```bash
-echo $GROQ_API_KEY  # should print your key
-```
-
-### 5. Install the prompt enhancer
+### 6. Install the prompt enhancer
 
 ```bash
 bash scripts/install-forge-enhance.sh
+# then bind the global hotkey per the installer's printed instructions
+# River:  riverctl map normal Super E spawn forge-enhance-popup
+# GNOME:  Settings → Keyboard → Custom Shortcuts → Super+E
 ```
 
-Bind the global hotkey for your compositor (the installer prints the
-exact recipe — copy-paste it):
-
-- River: `riverctl map normal Super E spawn forge-enhance-popup`
-- GNOME: Settings → Keyboard → Custom Shortcuts → Super+E
-
-Test:
+### 7. Re-auth fresh (do NOT copy old configs back)
 
 ```bash
-forge-enhance "build me a quick CLI that does X"
+gh auth login                       # new session, new device approval
+aws configure --profile <name>      # only the profiles you actually use
+npm login                           # only if publishing
+gcloud auth login                   # only if using GCP
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 ```
 
-### 6. Re-clone the operator repos
+Skip everything you don't actively use. The point of starting fresh is
+not auto-restoring credentials for services you've drifted away from.
 
-The repo list lives in your GitHub account; clone what you need on demand
-rather than mass-syncing:
+### 8. Sanity checks
 
-```bash
-gh auth login            # uses your restored ~/.config/gh
-cd ~
-gh repo clone VibeCodingLabs/forge-autoresearch
-gh repo clone VibeCodingLabs/forge-symphony
-# ...etc as needed
-```
-
-Anything else lives in `/mnt/vault/backups/phantom-2026-05-30-prewipe/`
-and can be copied back selectively.
-
-### 7. Sanity checks
-
-- [ ] `git config user.email` matches your GitHub identity
 - [ ] `ssh -T git@github.com` returns the expected user
 - [ ] `gpg --list-secret-keys` shows your signing key
 - [ ] `gh auth status` shows you logged in
-- [ ] Prompt enhancer responds: `forge-enhance "test"` returns rewritten text
-- [ ] Hotkey works: press Super+E, popup appears, type, result lands in
-      clipboard, notification fires
+- [ ] `forge-enhance "test prompt"` returns rewritten text
+- [ ] Super+E hotkey opens the popup, result lands in clipboard
 
-If all seven pass, you're operator-ready.
+If all five pass, you're operator-ready on a clean machine.
 
 ---
 
-## What you intentionally do NOT restore
+## Mining the archive (do this later, on demand)
 
-These are regenerable and would just slow the restore:
+The vault snapshot at `/mnt/vault/backups/phantom-<date>-prewipe/` is
+your museum. When you remember "wait, I wrote a script that did X" or
+"that one tmux config I liked":
 
-- `~/.cache/`, `~/.npm`, `~/.pnpm-store/`, `~/.bun/cache/`
-- All `node_modules/`, `__pycache__/`, `.venv/`, `target/`, `dist/`, `build/`
-- `~/.local/share/Trash/`, `~/.local/share/flatpak/repo/`
-- Browser `Cache*/`, `cache2/` dirs
-- `~/snap/`, `~/google-cloud-sdk/` (reinstall via apt / official installer)
+```bash
+# search the archive by name
+find /mnt/vault/backups/phantom-2026-05-30-prewipe/ -iname '*tmux*' -type f
+find /mnt/vault/backups/phantom-2026-05-30-prewipe/ -iname '*<thing>*'
 
-The `rsync-excludes.txt` from the audit captures all of this.
+# search the archive by content
+grep -r --include='*.sh' 'function-name' /mnt/vault/backups/phantom-*-prewipe/
+
+# pull one specific thing forward
+cp -a /mnt/vault/backups/phantom-2026-05-30-prewipe/.config/<thing> ~/.config/
+```
+
+**The rule**: bring something forward only if you've consciously decided
+you want it on the new system. If you haven't touched it in 6 months,
+leaving it in vault is the right call. The whole point of the wipe is
+not re-importing things on autopilot.
+
+When you find something genuinely worth bringing forward as a *pattern*
+(not just a file), promote it: copy it into a `forge-os` config under
+`configs/`, commit it, push it. That way it ships with the next bootstrap.
 
 ---
 
 ## If something goes wrong
 
-1. The `/mnt/vault/backups/phantom-*-prewipe/` snapshot is your rollback.
-   Boot a live USB, mount vault, copy back to a fresh home dir.
-2. ForgeOS itself is on GitHub — `git clone` always works as long as you
-   have `git` and a network.
-3. `env.master.example` is in this repo with every sign-up URL — you can
-   re-key from scratch on any machine in under an hour.
-4. This checklist is in `docs/MIGRATION_CHECKLIST.md` in this repo — clone
-   forge-os anywhere to re-read it.
+- **Lost a credential**: vault snapshot has it; mount and dig
+- **Broke the new OS during install.sh**: re-run `./install.sh` (idempotent)
+- **Vault didn't mount on first boot**: `lsblk`, find the label, `sudo
+  mount /dev/disk/by-label/VAULT /mnt/vault`
+- **Need something from yesterday's work**: GitHub has all of today's
+  forge-os + forge-autoresearch commits; just `gh repo clone`
+- **This checklist itself**: `git clone
+  https://github.com/VibeCodingLabs/forge-os.git` from any machine
