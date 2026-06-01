@@ -2,7 +2,7 @@
 
 ForgeOS is the public post-wipe recovery and command-center bootstrap repo for rebuilding a Debian-based AI automation workstation from a clean install.
 
-It is designed for Ghostnode / VibeCodingLabs operator machines, starting with the HP14 lab station, then promoting stable layers to the main workstation.
+It is designed for VibeCodingLabs operator machines, starting with the HP14 lab station, then promoting stable layers to the main workstation.
 
 ## What this repo does
 
@@ -59,8 +59,8 @@ The installer currently exposes these top-level actions:
 
 - Preflight + disk report
 - Minimal Recovery Base
-- HP14 Lab Stack
-- Ghostnode Secure Workstation
+- HP14 test stack
+- Secure Workstation
 - Custom Modules
 - Show manifests
 - Copy terminal configs
