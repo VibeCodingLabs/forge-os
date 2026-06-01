@@ -48,8 +48,8 @@ Use the HP14 as the lab machine and install in this order:
 2. Minimal Recovery Base
 3. Install Command Center UX stack
 4. Test `forge-tui`
-5. HP14 Lab Stack
-6. Ghostnode Secure Workstation only after the earlier steps work
+5. HP14 test stack
+6. Secure Workstation only after the earlier steps work
 
 The full workstation profile installs many more packages, so it should be treated as a promotion target, not the first smoke test.
 
