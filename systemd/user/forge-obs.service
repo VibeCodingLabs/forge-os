@@ -1,0 +1,30 @@
+[Unit]
+Description=ForgeOS observability collector (on-demand)
+Documentation=https://github.com/VibeCodingLabs/forge-os
+After=default.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c '\
+  OBS_DIR="$HOME/.forge-os/logs/obs"; \
+  mkdir -p "$OBS_DIR"; \
+  SNAP="$OBS_DIR/snap-$(date +%%Y%%m%%d-%%H%%M%%S).txt"; \
+  { \
+    echo "=== ForgeOS Obs Snap: $(date -Iseconds) ==="; \
+    echo "-- uptime --"; uptime; \
+    echo "-- mem --"; free -h; \
+    echo "-- disk --"; df -h / $HOME; \
+    echo "-- top cpu procs --"; ps aux --sort=-%cpu | head -12; \
+    echo "-- top mem procs --"; ps aux --sort=-%mem | head -12; \
+    echo "-- journal errors (last 50) --"; \
+    journalctl -p err --no-pager -n 50 2>/dev/null || true; \
+    echo "-- wayland display --"; echo "WAYLAND_DISPLAY=$WAYLAND_DISPLAY"; \
+    echo "-- river log (tail 30) --"; \
+    tail -30 "$HOME/.forge-os/logs/river/session.log" 2>/dev/null || echo "no river log"; \
+  } > "$SNAP" 2>&1; \
+  echo "[obs] snapshot: $SNAP"'
+StandardOutput=append:%h/.forge-os/logs/obs/obs.log
+StandardError=append:%h/.forge-os/logs/obs/obs.log
+
+[Install]
+WantedBy=default.target

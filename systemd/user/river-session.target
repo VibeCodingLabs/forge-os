@@ -1,0 +1,9 @@
+[Unit]
+Description=River compositor session target
+Documentation=man:systemd.special(7)
+Requires=graphical-session-pre.target
+After=graphical-session-pre.target
+Wants=xdg-desktop-autostart.target
+
+[Install]
+WantedBy=graphical-session.target

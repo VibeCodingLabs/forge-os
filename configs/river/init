@@ -1,0 +1,249 @@
+#!/bin/sh
+# =============================================================================
+# ForgeOS — River Compositor Init
+# Full keybind, layout, autostart, and UX/UI chain
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# ENVIRONMENT
+# ---------------------------------------------------------------------------
+export XDG_CURRENT_DESKTOP=river
+export XDG_SESSION_TYPE=wayland
+export XDG_SESSION_DESKTOP=river
+export MOZ_ENABLE_WAYLAND=1
+export ELECTRON_OZONE_PLATFORM_HINT=wayland
+export QT_QPA_PLATFORM=wayland
+export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
+export GDK_BACKEND=wayland
+export SDL_VIDEODRIVER=wayland
+export CLUTTER_BACKEND=wayland
+export XCURSOR_THEME=Adwaita
+export XCURSOR_SIZE=24
+
+# ---------------------------------------------------------------------------
+# MODIFIER KEY
+# ---------------------------------------------------------------------------
+MOD="Super"
+
+# ---------------------------------------------------------------------------
+# LAYOUT: rivertile (tall stack, 6:4 ratio)
+# ---------------------------------------------------------------------------
+riverctl default-layout rivertile
+rivertile -view-padding 6 -outer-padding 8 -main-ratio 0.55 &
+
+# ---------------------------------------------------------------------------
+# AUTOSTART
+# ---------------------------------------------------------------------------
+# Notification daemon
+if command -v mako >/dev/null 2>&1; then
+  mako &
+fi
+
+# Status bar
+if command -v waybar >/dev/null 2>&1; then
+  waybar &
+fi
+
+# Pipewire audio
+if command -v pipewire >/dev/null 2>&1; then
+  pipewire &
+  sleep 0.5
+  if command -v wireplumber >/dev/null 2>&1; then
+    wireplumber &
+  fi
+  if command -v pipewire-pulse >/dev/null 2>&1; then
+    pipewire-pulse &
+  fi
+fi
+
+# XDG portals
+if command -v xdg-desktop-portal >/dev/null 2>&1; then
+  /usr/libexec/xdg-desktop-portal -r &
+  sleep 0.3
+  /usr/libexec/xdg-desktop-portal-wlr &
+fi
+
+# D-Bus activation environment
+dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE &
+
+# Idle / screen lock
+if command -v swayidle >/dev/null 2>&1; then
+  swayidle -w \
+    timeout 300 'swaylock -f -c 000000' \
+    timeout 600 'wlopm --off \*' resume 'wlopm --on \*' \
+    before-sleep 'swaylock -f -c 000000' &
+fi
+
+# Forge observability timers (systemd user)
+systemctl --user start forge-heartbeat.timer forge-observer.timer 2>/dev/null || true
+
+# ---------------------------------------------------------------------------
+# CORE KEYBINDINGS
+# ---------------------------------------------------------------------------
+
+# Terminal
+if command -v kitty >/dev/null 2>&1; then
+  riverctl map normal "$MOD" Return spawn kitty
+elif command -v wezterm >/dev/null 2>&1; then
+  riverctl map normal "$MOD" Return spawn wezterm
+else
+  riverctl map normal "$MOD" Return spawn foot
+fi
+
+# Application launcher
+if command -v wofi >/dev/null 2>&1; then
+  riverctl map normal "$MOD" D spawn 'wofi --show drun'
+elif command -v rofi >/dev/null 2>&1; then
+  riverctl map normal "$MOD" D spawn 'rofi -show drun'
+fi
+
+# File manager
+riversctl map normal "$MOD" E spawn 'kitty -e yazi' 2>/dev/null || true
+
+# Web browser
+if command -v firefox-esr >/dev/null 2>&1; then
+  riverctl map normal "$MOD" B spawn firefox-esr
+elif command -v chromium >/dev/null 2>&1; then
+  riverctl map normal "$MOD" B spawn chromium
+fi
+
+# Screenshot: region
+if command -v grim >/dev/null 2>&1 && command -v slurp >/dev/null 2>&1; then
+  riverctl map normal "$MOD" S spawn 'grim -g "$(slurp)" ~/forge-os/downloads/screenshot-$(date +%Y%m%d-%H%M%S).png'
+  # Full screen screenshot
+  riverctl map normal "$MOD+Shift" S spawn 'grim ~/forge-os/downloads/screenshot-$(date +%Y%m%d-%H%M%S).png'
+fi
+
+# Clipboard manager (if cliphist available)
+if command -v cliphist >/dev/null 2>&1 && command -v wofi >/dev/null 2>&1; then
+  riverctl map normal "$MOD" V spawn 'cliphist list | wofi --dmenu | cliphist decode | wl-copy'
+  wl-paste --watch cliphist store &
+fi
+
+# ---------------------------------------------------------------------------
+# WINDOW MANAGEMENT
+# ---------------------------------------------------------------------------
+
+# Close view
+riversctl map normal "$MOD+Shift" Q close
+
+# Exit River
+riverctl map normal "$MOD+Shift" E spawn 'riverctl exit'
+
+# Focus navigation
+riversctl map normal "$MOD" H focus-view left
+riversctl map normal "$MOD" J focus-view down
+riversctl map normal "$MOD" K focus-view up
+riversctl map normal "$MOD" L focus-view right
+
+# Swap views
+riversctl map normal "$MOD+Shift" H swap left
+riversctl map normal "$MOD+Shift" J swap down
+riversctl map normal "$MOD+Shift" K swap up
+riversctl map normal "$MOD+Shift" L swap right
+
+# Move focus to output
+riversctl map normal "$MOD" Period focus-output next
+riversctl map normal "$MOD" Comma focus-output previous
+
+# Send view to output
+riversctl map normal "$MOD+Shift" Period send-to-output next
+riversctl map normal "$MOD+Shift" Comma send-to-output previous
+
+# Bump main count (rivertile)
+riversctl map normal "$MOD" Plus send-layout-cmd rivertile 'main-count +1'
+riversctl map normal "$MOD" Minus send-layout-cmd rivertile 'main-count -1'
+
+# Adjust main ratio
+riversctl map normal "$MOD+Alt" H send-layout-cmd rivertile 'main-ratio -0.05'
+riversctl map normal "$MOD+Alt" L send-layout-cmd rivertile 'main-ratio +0.05'
+
+# Toggle float
+riversctl map normal "$MOD+Shift" Space toggle-float
+
+# Toggle fullscreen
+riversctl map normal "$MOD" F toggle-fullscreen
+
+# Move floating views with mouse
+riversctl map-pointer normal "$MOD" BTN_LEFT move-view
+riversctl map-pointer normal "$MOD" BTN_RIGHT resize-view
+riversctl map-pointer normal "$MOD" BTN_MIDDLE toggle-float
+
+# ---------------------------------------------------------------------------
+# TAGS (workspaces 1-9)
+# ---------------------------------------------------------------------------
+for i in $(seq 1 9); do
+  tags=$((1 << (i - 1)))
+  riverctl map normal "$MOD" "$i" set-focused-tags $tags
+  riverctl map normal "$MOD+Shift" "$i" set-view-tags $tags
+  riverctl map normal "$MOD+Control" "$i" toggle-focused-tags $tags
+  riverctl map normal "$MOD+Shift+Control" "$i" toggle-view-tags $tags
+done
+
+# All tags
+all_tags=$(((1 << 32) - 1))
+riverctl map normal "$MOD" 0 set-focused-tags $all_tags
+riverctl map normal "$MOD+Shift" 0 set-view-tags $all_tags
+
+# ---------------------------------------------------------------------------
+# MEDIA KEYS
+# ---------------------------------------------------------------------------
+for mode in normal locked; do
+  riverctl map "$mode" None XF86AudioRaiseVolume  spawn 'wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+'
+  riverctl map "$mode" None XF86AudioLowerVolume  spawn 'wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-'
+  riverctl map "$mode" None XF86AudioMute         spawn 'wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle'
+  riverctl map "$mode" None XF86AudioMicMute      spawn 'wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle'
+  riverctl map "$mode" None XF86MonBrightnessUp   spawn 'brightnessctl set 5%+'
+  riverctl map "$mode" None XF86MonBrightnessDown spawn 'brightnessctl set 5%-'
+  riverctl map "$mode" None XF86AudioPlay         spawn 'playerctl play-pause'
+  riverctl map "$mode" None XF86AudioNext         spawn 'playerctl next'
+  riverctl map "$mode" None XF86AudioPrev         spawn 'playerctl previous'
+done
+
+# ---------------------------------------------------------------------------
+# INPUT CONFIGURATION
+# ---------------------------------------------------------------------------
+riversctl set-repeat 50 300
+
+# Touchpad (adjust device name as needed for your hardware)
+for device in $(riverctl list-inputs 2>/dev/null | grep -i touchpad || true); do
+  riverctl input "$device" tap enabled
+  riverctl input "$device" natural-scroll enabled
+  riverctl input "$device" accel-profile adaptive
+  riverctl input "$device" pointer-accel 0.2
+done
+
+# ---------------------------------------------------------------------------
+# APPEARANCE / RULES
+# ---------------------------------------------------------------------------
+riversctl border-width 2
+riversctl border-color-focused 0x6C91BF
+riversctl border-color-unfocused 0x2A2A3E
+riversctl border-color-urgent 0xE06C75
+
+# Float rules for common popups / dialogs
+for app_id in 'pavucontrol' 'nm-connection-editor' 'blueman-manager' 'gnome-calculator' 'org.gnome.Calculator'; do
+  riverctl rule-add -app-id "$app_id" float
+done
+
+for title in 'Preferences' 'Settings' 'Open File' 'Save File' 'About'; do
+  riverctl rule-add -title "$title" float
+done
+
+# ---------------------------------------------------------------------------
+# FOCUS FOLLOWS POINTER
+# ---------------------------------------------------------------------------
+riversctl focus-follows-cursor always
+
+# ---------------------------------------------------------------------------
+# OBSERVABILITY HOOK — log session start
+# ---------------------------------------------------------------------------
+RIVER_LOG_DIR="${FORGE_HOME:-$HOME/.forge-os}/logs/river"
+mkdir -p "$RIVER_LOG_DIR"
+printf '[%s] River session started | display=%s | user=%s\n' \
+  "$(date -Iseconds)" "${WAYLAND_DISPLAY:-unknown}" "$(id -un)" \
+  >> "$RIVER_LOG_DIR/session.log"
+
+# ---------------------------------------------------------------------------
+# DONE — hand off to event loop
+# ---------------------------------------------------------------------------

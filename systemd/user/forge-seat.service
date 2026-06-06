@@ -1,0 +1,24 @@
+[Unit]
+Description=ForgeOS seat management bootstrap
+Documentation=https://github.com/VibeCodingLabs/forge-os
+After=dbus.socket
+Requires=dbus.socket
+Before=river-session.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/bin/mkdir -p %h/.forge-os/logs %h/.forge-os/state %h/.forge-os/telemetry
+ExecStart=/bin/sh -c '\
+  dbus-update-activation-environment --systemd \
+    WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE \
+    XDG_SESSION_DESKTOP XDG_RUNTIME_DIR DISPLAY 2>/dev/null || true; \
+  printf "[%s] forge-seat: seat bootstrap OK | user=%s\\n" \
+    "$(date -Iseconds)" "$USER" \
+    >> $HOME/.forge-os/logs/seat.log'
+ExecStop=/bin/sh -c '\
+  printf "[%s] forge-seat: session ended\\n" "$(date -Iseconds)" \
+    >> $HOME/.forge-os/logs/seat.log'
+
+[Install]
+WantedBy=default.target

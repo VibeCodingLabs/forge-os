@@ -1,0 +1,23 @@
+[Unit]
+Description=River Wayland compositor session
+Documentation=https://codeberg.org/river/river
+Requires=dbus.socket
+After=dbus.socket
+BindsTo=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+EnvironmentFile=-%h/.config/river/env
+ExecStartPre=/bin/mkdir -p %h/.forge-os/logs/river
+ExecStart=/usr/bin/river
+ExecStop=/bin/sh -c 'riverctl exit 2>/dev/null || true'
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=10
+KillMode=process
+StandardOutput=append:%h/.forge-os/logs/river/session.log
+StandardError=append:%h/.forge-os/logs/river/session-err.log
+
+[Install]
+WantedBy=graphical-session.target
