@@ -1,6 +1,14 @@
 [Unit]
-Description=ForgeOS heartbeat snapshot
+Description=ForgeOS heartbeat — system health snapshot
+Documentation=https://github.com/VibeCodingLabs/forge-os
+After=default.target
 
 [Service]
 Type=oneshot
 ExecStart=%h/.local/bin/forge-heartbeat
+StandardOutput=append:%h/.forge-os/logs/heartbeat-svc.log
+StandardError=append:%h/.forge-os/logs/heartbeat-svc.log
+Environment=FORGE_HOME=%h/.forge-os
+
+[Install]
+WantedBy=default.target

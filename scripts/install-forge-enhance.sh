@@ -1,107 +1,98 @@
 #!/usr/bin/env bash
-# install-forge-enhance — build the binary, install the wrapper + .desktop,
-# print hotkey-binding instructions for the operator's compositor.
-#
-# Idempotent. Re-runnable after every wipe.
-#
-# Usage:
-#   bash scripts/install-forge-enhance.sh
-#
-# Requires (apt installs handled by ForgeOS install.sh):
-#   go (>= 1.22)         — builds the binary
-#   libnotify-bin        — notify-send (notifications)
-#   wl-clipboard         — wl-copy (Wayland clipboard)   OR  xclip
-#   one of: zenity, yad, wofi, bemenu, rofi, dmenu       — popup helper
-
+# =============================================================================
+# ForgeOS — install-forge-enhance
+# Build forge-enhance binary, install wrapper + .desktop
+# Observability: all steps logged to $FORGE_HOME/logs/
+# =============================================================================
 set -euo pipefail
+
+FORGE_HOME="${FORGE_HOME:-$HOME/.forge-os}"
+LOG_DIR="$FORGE_HOME/logs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/install-forge-enhance-$(date +%Y%m%d-%H%M%S).log"
+
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
+log()  { printf "%b\n" "$*" | tee -a "$LOG_FILE"; }
+ok()   { log "${GREEN}[ OK ]${NC} $*"; }
+warn() { log "${YELLOW}[WARN]${NC} $*"; }
+err()  { log "${RED}[ERR ]${NC} $*"; }
+run()  { log "${CYAN} ▶${NC} $*"; "$@" 2>&1 | tee -a "$LOG_FILE"; }
+
+log "=== install-forge-enhance started: $(date --iso-8601=seconds) ==="
+log "user=$(id -un) host=$(hostname) forge_home=$FORGE_HOME"
 
 BIN_DIR="${HOME}/.local/bin"
 DESKTOP_DIR="${HOME}/.local/share/applications"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-
 mkdir -p "$BIN_DIR" "$DESKTOP_DIR"
 
-echo "==> Building forge-enhance"
+log "--- build ---"
+STEP_START=$(date +%s)
 cd "$REPO_ROOT"
-go build -trimpath -ldflags="-s -w" -o "$BIN_DIR/forge-enhance" ./cmd/forge-enhance/
+run go build -trimpath -ldflags="-s -w" -o "$BIN_DIR/forge-enhance" ./cmd/forge-enhance/
+STEP_END=$(date +%s)
+ok "forge-enhance built in $((STEP_END - STEP_START))s → $BIN_DIR/forge-enhance"
 
-echo "==> Installing forge-enhance-popup wrapper"
-install -m 0755 "$REPO_ROOT/bin/forge-enhance-popup.sh" "$BIN_DIR/forge-enhance-popup"
+log "--- install popup wrapper ---"
+run install -m 0755 "$REPO_ROOT/bin/forge-enhance-popup.sh" "$BIN_DIR/forge-enhance-popup"
+ok "forge-enhance-popup installed → $BIN_DIR/forge-enhance-popup"
 
-echo "==> Installing .desktop entry (dock applet)"
-install -m 0644 "$REPO_ROOT/configs/desktop/forge-enhance.desktop" "$DESKTOP_DIR/forge-enhance.desktop"
-
-# Refresh GNOME's app menu so the new entry shows up immediately.
+log "--- install .desktop entry ---"
+run install -m 0644 "$REPO_ROOT/configs/desktop/forge-enhance.desktop" "$DESKTOP_DIR/forge-enhance.desktop"
 if command -v update-desktop-database >/dev/null 2>&1; then
-  update-desktop-database -q "$DESKTOP_DIR" || true
+  run update-desktop-database -q "$DESKTOP_DIR" || true
 fi
+ok ".desktop entry installed"
 
-echo ""
-echo "==> Capability check"
+log "--- capability check ---"
+POPUP_OK=""; CLIP_OK=""; KEY_OK=""
 for B in zenity yad wofi bemenu rofi dmenu; do
   if command -v "$B" >/dev/null 2>&1; then
-    echo "  popup helper found: $B"
-    POPUP_OK=1
-    break
+    ok "popup helper: $B"; POPUP_OK=1; break
   fi
 done
-[ -z "${POPUP_OK:-}" ] && echo "  WARNING: no popup helper found — install zenity (GNOME) or wofi (River/Sway)"
+[[ -z "$POPUP_OK" ]] && warn "No popup helper found — install wofi (River) or zenity (GNOME)"
 
 for B in wl-copy xclip xsel; do
   if command -v "$B" >/dev/null 2>&1; then
-    echo "  clipboard helper found: $B"
-    CLIP_OK=1
-    break
+    ok "clipboard helper: $B"; CLIP_OK=1; break
   fi
 done
-[ -z "${CLIP_OK:-}" ] && echo "  WARNING: no clipboard helper — install wl-clipboard (Wayland) or xclip (X11)"
+[[ -z "$CLIP_OK" ]] && warn "No clipboard helper — install wl-clipboard (Wayland) or xclip (X11)"
 
-if command -v notify-send >/dev/null 2>&1; then
-  echo "  notify-send found"
-else
-  echo "  WARNING: notify-send not found — install libnotify-bin"
-fi
+command -v notify-send >/dev/null 2>&1 && ok "notify-send: found" || warn "notify-send not found — install libnotify-bin"
 
-echo ""
-echo "==> Provider check"
+log "--- provider check ---"
 for V in GROQ_API_KEY CEREBRAS_API_KEY GEMINI_API_KEY; do
-  if [ -n "${!V:-}" ]; then
-    echo "  $V set (will use this)"
-    KEY_OK=1
-    break
+  if [[ -n "${!V:-}" ]]; then
+    ok "API key: $V set"; KEY_OK=1; break
   fi
 done
-if [ -z "${KEY_OK:-}" ]; then
+if [[ -z "$KEY_OK" ]]; then
   if command -v ollama >/dev/null 2>&1; then
-    echo "  no API key set, but Ollama is installed — will use it as fallback"
+    warn "No API key — Ollama found, will use as fallback"
   else
-    echo "  WARNING: no API key set and Ollama not installed"
-    echo "           sign up for a free Groq key: https://console.groq.com/keys"
-    echo "           then add to ~/.env.forge:  GROQ_API_KEY=..."
+    warn "No API key and Ollama not installed"
+    warn "Get a free Groq key: https://console.groq.com/keys"
+    warn "Add to ~/.env.forge: GROQ_API_KEY=..."
   fi
 fi
 
+log "--- observability registration ---"
+mkdir -p "$FORGE_HOME/state"
+printf 'forge_enhance_installed=%s\nforge_enhance_bin=%s\n' \
+  "$(date --iso-8601=seconds)" "$BIN_DIR/forge-enhance" \
+  > "$FORGE_HOME/state/forge-enhance.env"
+ok "State written to $FORGE_HOME/state/forge-enhance.env"
+
+log "=== install-forge-enhance complete: $(date --iso-8601=seconds) ==="
+ok "Log: $LOG_FILE"
+
 echo ""
-echo "==> Done. Next steps:"
-echo "  1. Make sure ~/.local/bin is on PATH"
-echo "  2. Source ~/.env.forge in your shell rc (or pass keys to the hotkey context):"
+echo "Next steps:"
+echo "  1. Ensure ~/.local/bin is on PATH"
+echo "  2. Source ~/.env.forge in your shell rc:"
 echo "       set -a; source ~/.env.forge; set +a"
-echo "  3. Bind the global hotkey for your compositor:"
-echo ""
-echo "       GNOME (Pop!_OS / Debian+GNOME):"
-echo "         Settings → Keyboard → Custom Shortcuts → +"
-echo "           name:    forge-enhance"
-echo "           command: $BIN_DIR/forge-enhance-popup"
-echo "           binding: <Super>E"
-echo ""
-echo "       River:"
-echo "         echo 'riverctl map normal Super E spawn forge-enhance-popup' >> ~/.config/river/init"
-echo ""
-echo "       Sway / Hyprland:"
-echo "         add to config:  bindsym Mod4+e exec forge-enhance-popup"
-echo ""
-echo "  4. The dock applet is available as 'Forge Enhance' in the app launcher"
-echo "     — right-click → Pin to favorites to keep it on the dock."
-echo ""
-echo "  Try it:"
-echo "       forge-enhance 'build me a CLI that does X'"
+echo "  3. Add River keybinding (already in configs/river/init):"
+echo "       riverctl map normal Super E spawn forge-enhance-popup"
+echo "  4. Try it: forge-enhance 'build me a CLI that does X'"

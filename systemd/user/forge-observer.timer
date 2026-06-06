@@ -1,9 +1,11 @@
 [Unit]
-Description=Run ForgeOS observer every 15 minutes
+Description=ForgeOS observer — every 15 minutes
+Documentation=https://github.com/VibeCodingLabs/forge-os
 
 [Timer]
 OnBootSec=3min
 OnUnitActiveSec=15min
+AccuracySec=30s
 Persistent=true
 
 [Install]

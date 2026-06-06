@@ -1,9 +1,11 @@
 [Unit]
-Description=Run ForgeOS heartbeat every 5 minutes
+Description=ForgeOS heartbeat — every 5 minutes
+Documentation=https://github.com/VibeCodingLabs/forge-os
 
 [Timer]
-OnBootSec=2min
+OnBootSec=1min
 OnUnitActiveSec=5min
+AccuracySec=10s
 Persistent=true
 
 [Install]
