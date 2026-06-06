@@ -1,0 +1,16 @@
+[Unit]
+Description=ForgeOS agent call observability TUI
+Documentation=https://github.com/VibeCodingLabs/forge-os
+After=default.target
+
+[Service]
+Type=simple
+Environment=FORGE_HOME=%h/.forge-os
+ExecStart=%h/.local/bin/forge-agent-obs
+Restart=on-failure
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

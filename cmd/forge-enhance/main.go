@@ -1,24 +1,7 @@
-// forge-enhance — a v0-style "enhance my prompt" button for the terminal,
-// global hotkey, and dock applet.
-//
-// Reads a raw prompt from stdin, an argument, or a popup dialog. Calls a free
-// LLM API to rewrite it as a clearer, more structured, more specific prompt.
-// Writes the result to stdout, the clipboard, or a desktop notification.
-//
-// Provider order (first one with a non-empty env key wins; on failure, falls
-// through to the next):
-//   1. Groq         GROQ_API_KEY      https://console.groq.com/keys
-//   2. Cerebras     CEREBRAS_API_KEY  https://cloud.cerebras.ai/
-//   3. Google AI    GEMINI_API_KEY    https://aistudio.google.com/app/apikey
-//   4. Ollama       (no key)          http://127.0.0.1:11434
-//
-// Designed to be invoked three ways from the same binary:
-//   pe "raw prompt here"              # CLI; result to stdout
-//   echo "raw" | pe                   # CLI; piped
-//   pe --popup --copy --notify        # hotkey / dock; popup -> clipboard
-//
-// See bin/forge-enhance-popup.sh for the hotkey wrapper and
-// configs/desktop/forge-enhance.desktop for the dock applet.
+// forge-enhance — v0-style "enhance my prompt" button.
+// Provider order: Groq → Cerebras → Gemini → Ollama
+// Every call is appended as a JSONL record to $FORGE_HOME/logs/agent-calls.jsonl
+// for pickup by forge-agent-obs TUI.
 package main
 
 import (
@@ -32,11 +15,12 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
 
-const version = "0.1.0"
+const version = "0.2.0"
 
 const systemPrompt = `You are a Prompt Enhancer. The user will give you a raw prompt — possibly vague, telegraphic, or missing detail. Rewrite it as a clearer, more specific, better-structured prompt that an LLM or agent can act on with high confidence.
 
@@ -52,20 +36,107 @@ Rules:
 Output: the enhanced prompt, and nothing else.`
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Agent call log (JSONL, one record per call)
+// Written to $FORGE_HOME/logs/agent-calls.jsonl
+// Read by cmd/forge-agent-obs
+
+type CallStatus string
+
+const (
+	StatusOK      CallStatus = "ok"
+	StatusError   CallStatus = "error"
+	StatusTimeout CallStatus = "timeout"
+)
+
+// AgentCallRecord is the JSONL schema for one agent call.
+type AgentCallRecord struct {
+	ID            string     `json:"id"`              // unix-nano hex
+	Timestamp     string     `json:"timestamp"`       // ISO-8601
+	Agent         string     `json:"agent"`           // "forge-enhance"
+	Provider      string     `json:"provider"`        // groq / cerebras / gemini / ollama
+	Model         string     `json:"model"`           // model id used
+	Status        CallStatus `json:"status"`          // ok | error | timeout
+	DurationMS    int64      `json:"duration_ms"`     // wall time of HTTP call
+	TotalDurationMS int64    `json:"total_duration_ms"` // wall time incl. fallbacks
+	InputTokens   int        `json:"input_tokens"`    // estimated (char/4)
+	OutputTokens  int        `json:"output_tokens"`   // estimated
+	InputLen      int        `json:"input_len"`       // raw byte length
+	OutputLen     int        `json:"output_len"`      // raw byte length
+	HTTPStatus    int        `json:"http_status"`     // 0 if network error
+	ErrorMsg      string     `json:"error_msg,omitempty"`
+	FallbackCount int        `json:"fallback_count"`  // how many providers were tried before success
+	InputPreview  string     `json:"input_preview"`   // first 120 chars
+	OutputPreview string     `json:"output_preview,omitempty"` // first 120 chars
+	Host          string     `json:"host"`
+	User          string     `json:"user"`
+	Mode          string     `json:"mode"`            // cli | popup | pipe
+}
+
+func agentCallLogPath() string {
+	forgeHome := os.Getenv("FORGE_HOME")
+	if forgeHome == "" {
+		home, _ := os.UserHomeDir()
+		forgeHome = filepath.Join(home, ".forge-os")
+	}
+	dir := filepath.Join(forgeHome, "logs")
+	_ = os.MkdirAll(dir, 0o755)
+	return filepath.Join(dir, "agent-calls.jsonl")
+}
+
+func writeCallLog(rec AgentCallRecord) {
+	f, err := os.OpenFile(agentCallLogPath(), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	line, err := json.Marshal(rec)
+	if err != nil {
+		return
+	}
+	_, _ = f.Write(append(line, '\n'))
+}
+
+func hostname() string {
+	h, _ := os.Hostname()
+	return h
+}
+
+func username() string {
+	if u := os.Getenv("USER"); u != "" {
+		return u
+	}
+	if u := os.Getenv("LOGNAME"); u != "" {
+		return u
+	}
+	return "unknown"
+}
+
+func preview(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "…"
+}
+
+func estimateTokens(s string) int {
+	return (len(s) + 3) / 4
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Provider definitions
 
 type apiShape int
 
 const (
-	shapeOpenAI apiShape = iota // /v1/chat/completions, OpenAI-compatible
-	shapeGemini                 // Google generativelanguage v1beta
+	shapeOpenAI apiShape = iota
+	shapeGemini
 )
 
 type provider struct {
 	name    string
-	envKey  string // env var holding the API key (or "" for keyless like Ollama)
-	baseURL string // overridable via <NAME>_BASE_URL env var
-	model   string // overridable via <NAME>_MODEL env var
+	envKey  string
+	baseURL string
+	model   string
 	shape   apiShape
 }
 
@@ -93,6 +164,16 @@ type config struct {
 func main() {
 	cfg := parseFlags()
 
+	var mode string
+	switch {
+	case cfg.popup:
+		mode = "popup"
+	case cfg.input != "":
+		mode = "cli"
+	default:
+		mode = "pipe"
+	}
+
 	text, err := readInput(cfg)
 	if err != nil {
 		die(err)
@@ -104,7 +185,42 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.timeout)
 	defer cancel()
 
-	enhanced, usedProvider, err := enhance(ctx, text, cfg)
+	totalStart := time.Now()
+	enhanced, usedProvider, usedModel, fallbackCount, err := enhance(ctx, text, cfg)
+	totalDur := time.Since(totalStart)
+
+	// ---- write call log ----
+	rec := AgentCallRecord{
+		ID:              fmt.Sprintf("%x", totalStart.UnixNano()),
+		Timestamp:       totalStart.Format(time.RFC3339),
+		Agent:           "forge-enhance",
+		Provider:        usedProvider,
+		Model:           usedModel,
+		TotalDurationMS: totalDur.Milliseconds(),
+		InputLen:        len(text),
+		InputTokens:     estimateTokens(text),
+		InputPreview:    preview(strings.ReplaceAll(text, "\n", " "), 120),
+		FallbackCount:   fallbackCount,
+		Host:            hostname(),
+		User:            username(),
+		Mode:            mode,
+	}
+	if err != nil {
+		var status CallStatus = StatusError
+		if ctx.Err() == context.DeadlineExceeded {
+			status = StatusTimeout
+		}
+		rec.Status = status
+		rec.ErrorMsg = err.Error()
+	} else {
+		rec.Status = StatusOK
+		rec.OutputLen = len(enhanced)
+		rec.OutputTokens = estimateTokens(enhanced)
+		rec.OutputPreview = preview(strings.ReplaceAll(enhanced, "\n", " "), 120)
+	}
+	writeCallLog(rec)
+
+	// ---- original behaviour ----
 	if err != nil {
 		if cfg.notify {
 			_ = sendNotify("forge-enhance failed", err.Error())
@@ -118,11 +234,11 @@ func main() {
 		}
 	}
 	if cfg.notify {
-		preview := enhanced
-		if len(preview) > 200 {
-			preview = preview[:200] + "…"
+		p := enhanced
+		if len(p) > 200 {
+			p = p[:200] + "…"
 		}
-		_ = sendNotify(fmt.Sprintf("Enhanced via %s", usedProvider), preview)
+		_ = sendNotify(fmt.Sprintf("Enhanced via %s", usedProvider), p)
 	}
 	if !cfg.quiet {
 		fmt.Println(enhanced)
@@ -131,46 +247,24 @@ func main() {
 
 func parseFlags() config {
 	var cfg config
-	flag.BoolVar(&cfg.popup, "popup", false, "open a GUI popup to enter the prompt (zenity / wofi / bemenu)")
+	flag.BoolVar(&cfg.popup, "popup", false, "open a GUI popup to enter the prompt")
 	flag.BoolVar(&cfg.copyOut, "copy", false, "copy the enhanced prompt to the clipboard")
-	flag.BoolVar(&cfg.notify, "notify", false, "send a desktop notification with a preview of the result")
-	flag.BoolVar(&cfg.quiet, "quiet", false, "suppress stdout (use with --copy or --notify)")
-	flag.StringVar(&cfg.provider, "provider", "", "force a specific provider (groq|cerebras|gemini|ollama). default: first with a key")
-	flag.StringVar(&cfg.model, "model", "", "override the model id for the chosen provider")
+	flag.BoolVar(&cfg.notify, "notify", false, "send a desktop notification with a preview")
+	flag.BoolVar(&cfg.quiet, "quiet", false, "suppress stdout")
+	flag.StringVar(&cfg.provider, "provider", "", "force a specific provider (groq|cerebras|gemini|ollama)")
+	flag.StringVar(&cfg.model, "model", "", "override the model id")
 	flag.DurationVar(&cfg.timeout, "timeout", 30*time.Second, "request timeout")
 
 	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, `forge-enhance %s — v0-style prompt enhancer
-
-Usage:
-  forge-enhance [flags] [prompt]
-  echo "raw prompt" | forge-enhance [flags]
-  forge-enhance --popup --copy --notify          # hotkey / dock mode
-
-Flags:
-`, version)
+		fmt.Fprintf(os.Stderr, "forge-enhance %s\nUsage: forge-enhance [flags] [prompt]\n", version)
 		flag.PrintDefaults()
-		fmt.Fprintf(os.Stderr, `
-Providers (free tiers — set the env var that matches the provider you want):
-  GROQ_API_KEY       https://console.groq.com/keys
-  CEREBRAS_API_KEY   https://cloud.cerebras.ai/
-  GEMINI_API_KEY     https://aistudio.google.com/app/apikey
-  (Ollama needs no key; runs on http://127.0.0.1:11434)
-
-Examples:
-  forge-enhance "build me a CLI that does X"
-  cat prompt.md | forge-enhance --quiet --copy
-  forge-enhance --popup --copy --notify   # bind to Super+E
-`)
 	}
 	flag.Parse()
-
 	if *showVersion {
 		fmt.Println(version)
 		os.Exit(0)
 	}
-
 	if args := flag.Args(); len(args) > 0 {
 		cfg.input = strings.Join(args, " ")
 	}
@@ -192,20 +286,20 @@ func readInput(cfg config) (string, error) {
 		}
 		return string(b), nil
 	}
-	return "", errors.New("no input — pass a prompt as an argument, pipe via stdin, or use --popup")
+	return "", errors.New("no input — pass a prompt, pipe via stdin, or use --popup")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Provider routing + HTTP
 
-func enhance(ctx context.Context, text string, cfg config) (string, string, error) {
+func enhance(ctx context.Context, text string, cfg config) (string, string, string, int, error) {
 	chosen := selectProviders(cfg.provider)
 	if len(chosen) == 0 {
-		return "", "", errors.New("no provider available: set GROQ_API_KEY (or CEREBRAS_API_KEY / GEMINI_API_KEY) — or install + run Ollama")
+		return "", "", "", 0, errors.New("no provider available")
 	}
 
 	var lastErr error
-	for _, p := range chosen {
+	for i, p := range chosen {
 		if cfg.model != "" {
 			p.model = cfg.model
 		}
@@ -217,14 +311,14 @@ func enhance(ctx context.Context, text string, cfg config) (string, string, erro
 		}
 		out, err := callProvider(ctx, p, text)
 		if err == nil {
-			return out, p.name, nil
+			return out, p.name, p.model, i, nil
 		}
 		lastErr = fmt.Errorf("%s: %w", p.name, err)
 		if !cfg.quiet {
-			fmt.Fprintf(os.Stderr, "forge-enhance: %s failed, trying next provider — %v\n", p.name, err)
+			fmt.Fprintf(os.Stderr, "forge-enhance: %s failed, trying next — %v\n", p.name, err)
 		}
 	}
-	return "", "", fmt.Errorf("all providers failed; last error: %w", lastErr)
+	return "", "", "", len(chosen), fmt.Errorf("all providers failed; last: %w", lastErr)
 }
 
 func selectProviders(forced string) []provider {
@@ -252,7 +346,7 @@ func callProvider(ctx context.Context, p provider, text string) (string, error) 
 	case shapeGemini:
 		return callGemini(ctx, p, text)
 	}
-	return "", fmt.Errorf("unknown provider shape for %s", p.name)
+	return "", fmt.Errorf("unknown shape for %s", p.name)
 }
 
 type openAIRequest struct {
@@ -296,7 +390,9 @@ func callOpenAICompat(ctx context.Context, p provider, text string) (string, err
 		}
 		req.Header.Set("Authorization", "Bearer "+key)
 	}
+	start := time.Now()
 	resp, err := http.DefaultClient.Do(req)
+	_ = time.Since(start)
 	if err != nil {
 		return "", err
 	}
@@ -327,19 +423,13 @@ type geminiContent struct {
 	Parts []geminiPart `json:"parts"`
 	Role  string       `json:"role,omitempty"`
 }
-type geminiPart struct {
-	Text string `json:"text"`
-}
-type geminiGenerationConf struct {
-	Temperature float64 `json:"temperature"`
-}
+type geminiPart struct{ Text string `json:"text"` }
+type geminiGenerationConf struct{ Temperature float64 `json:"temperature"` }
 type geminiResponse struct {
 	Candidates []struct {
 		Content geminiContent `json:"content"`
 	} `json:"candidates"`
-	Error *struct {
-		Message string `json:"message"`
-	} `json:"error,omitempty"`
+	Error *struct{ Message string `json:"message"` } `json:"error,omitempty"`
 }
 
 func callGemini(ctx context.Context, p provider, text string) (string, error) {
@@ -376,7 +466,7 @@ func callGemini(ctx context.Context, p provider, text string) (string, error) {
 		return "", errors.New(out.Error.Message)
 	}
 	if len(out.Candidates) == 0 || len(out.Candidates[0].Content.Parts) == 0 {
-		return "", errors.New("no candidates in response")
+		return "", errors.New("no candidates")
 	}
 	return strings.TrimSpace(out.Candidates[0].Content.Parts[0].Text), nil
 }
@@ -391,9 +481,6 @@ func truncate(s string, n int) string {
 // ─────────────────────────────────────────────────────────────────────────────
 // Desktop integration
 
-// popupInput opens a GUI text dialog. Tries zenity (X11 + Wayland on GNOME),
-// then wofi (River / Sway / Hyprland), then bemenu (any wlroots compositor).
-// Reads what the user typed and returns it.
 func popupInput() (string, error) {
 	candidates := []struct {
 		bin  string
@@ -414,15 +501,13 @@ func popupInput() (string, error) {
 		cmd.Stdin = strings.NewReader("")
 		out, err := cmd.Output()
 		if err != nil {
-			// User cancelled — return empty (caller will treat as no input).
 			return "", err
 		}
 		return strings.TrimRight(string(out), "\n"), nil
 	}
-	return "", errors.New("no popup helper found (install zenity, yad, wofi, bemenu, rofi, or dmenu)")
+	return "", errors.New("no popup helper found")
 }
 
-// copyClipboard tries wl-copy first (Wayland), then xclip, then xsel.
 func copyClipboard(text string) error {
 	candidates := []struct {
 		bin  string
@@ -442,10 +527,9 @@ func copyClipboard(text string) error {
 			return nil
 		}
 	}
-	return errors.New("no clipboard helper found (install wl-clipboard, xclip, or xsel)")
+	return errors.New("no clipboard helper found")
 }
 
-// sendNotify uses notify-send (libnotify) for a desktop notification.
 func sendNotify(title, body string) error {
 	if _, err := exec.LookPath("notify-send"); err != nil {
 		return err
@@ -453,8 +537,7 @@ func sendNotify(title, body string) error {
 	return exec.Command("notify-send",
 		"--app-name=forge-enhance",
 		"--expire-time=5000",
-		title,
-		body,
+		title, body,
 	).Run()
 }
 
