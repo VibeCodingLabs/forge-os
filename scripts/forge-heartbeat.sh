@@ -12,11 +12,10 @@ set -Eeuo pipefail
 FORGE_HOME="${FORGE_HOME:-$HOME/.forge-os}"
 TELEM_DIR="$FORGE_HOME/telemetry/heartbeat"
 LOG_FILE="$FORGE_HOME/logs/heartbeat.log"
-mkdir -p "$FORGE_HOME/logs" "$FORGE_HOME/state" "$TELEMDIR"
-mkdir -p "$TELEMDIR"
+mkdir -p "$FORGE_HOME/logs" "$FORGE_HOME/state" "$TELEM_DIR"
 
 TS="$(date --iso-8601=seconds)"
-SNAP="$TELEMDIR/$(date +%Y%m%d-%H%M%S).env"
+SNAP="$TELEM_DIR/$(date +%Y%m%d-%H%M%S).env"
 
 # ---- helpers ---------------------------------------------------------------
 bat_pct()  { cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -1 || echo 'N/A'; }
@@ -81,4 +80,4 @@ if awk "BEGIN {exit !(\"$LOAD1\"+0 > $CPUS*1.5)}"; then
 fi
 
 # ---- rotate telemetry (keep 48h / ~576 files) ------------------------------
-find "$TELEMDIR" -name '*.env' -mmin +2880 -delete 2>/dev/null || true
+find "$TELEM_DIR" -name '*.env' -mmin +2880 -delete 2>/dev/null || true
