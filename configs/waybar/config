@@ -1,0 +1,53 @@
+{
+  "layer": "top",
+  "position": "top",
+  "height": 32,
+  "spacing": 8,
+  "modules-left": ["river/tags", "river/window"],
+  "modules-center": ["clock"],
+  "modules-right": ["pulseaudio", "network", "cpu", "memory", "temperature", "battery", "tray", "custom/forge"],
+  "river/tags": {
+    "num-tags": 9
+  },
+  "river/window": {
+    "max-length": 80
+  },
+  "clock": {
+    "format": "{:%a %b %d  %I:%M %p}",
+    "tooltip-format": "{:%Y-%m-%d %H:%M:%S}"
+  },
+  "cpu": {
+    "format": "CPU {usage}%",
+    "tooltip": true
+  },
+  "memory": {
+    "format": "RAM {}%"
+  },
+  "temperature": {
+    "critical-threshold": 85,
+    "format": "TEMP {temperatureC}°C"
+  },
+  "battery": {
+    "format": "BAT {capacity}%",
+    "format-charging": "BAT {capacity}% ⚡",
+    "states": {
+      "warning": 30,
+      "critical": 15
+    }
+  },
+  "network": {
+    "format-wifi": "NET {essid} {signalStrength}%",
+    "format-ethernet": "NET wired",
+    "format-disconnected": "NET down"
+  },
+  "pulseaudio": {
+    "format": "VOL {volume}%",
+    "format-muted": "MUTE",
+    "on-click": "pavucontrol"
+  },
+  "custom/forge": {
+    "format": "FORGE",
+    "tooltip": "Open Forge agent workspace",
+    "on-click": "kitty --title agent-workspace tmux new-session -A -s forge-agents"
+  }
+}
