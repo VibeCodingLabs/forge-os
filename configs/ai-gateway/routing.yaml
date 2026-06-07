@@ -1,0 +1,75 @@
+# Forge AI Gateway routing policy
+
+routing:
+  cache_first: true
+  local_first_for_low_risk: true
+  prefer_free_models: true
+  allow_paid_fallback: false
+  max_fallbacks: 4
+
+risk_levels:
+  low:
+    allow_local: true
+    allow_free_cloud: true
+    requires_approval: false
+  medium:
+    allow_local: true
+    allow_free_cloud: true
+    requires_approval: false
+  high:
+    allow_local: true
+    allow_free_cloud: true
+    requires_approval: true
+
+task_routes:
+  coding:
+    description: Code generation, debugging, tests, refactors.
+    prefer_capabilities: [coding, reasoning, json]
+    prefer:
+      - ollama:qwen2.5-coder
+      - groq:qwen-coder
+      - cerebras:qwen-coder
+      - openrouter:free-coder
+    fallback:
+      - ollama:deepseek-coder
+      - ollama:llama3.1
+
+  reasoning:
+    description: Architecture, planning, strategy, multi-step thinking.
+    prefer_capabilities: [reasoning, long_context]
+    prefer:
+      - google:gemini-free
+      - openrouter:free-reasoner
+      - groq:reasoning-model
+    fallback:
+      - ollama:llama3.1
+
+  summarization:
+    description: Logs, docs, notes, summaries, issue triage.
+    prefer_capabilities: [fast, cheap]
+    prefer:
+      - ollama:llama3.1
+      - groq:fast-general
+      - openrouter:free-general
+    fallback:
+      - ollama:phi3
+
+  rag_answer:
+    description: Knowledge-base answers with injected private context.
+    prefer_capabilities: [long_context, json]
+    prefer:
+      - ollama:llama3.1
+      - google:gemini-free
+      - openrouter:free-long-context
+    fallback:
+      - ollama:qwen2.5
+
+  automation:
+    description: Daily useful automations, docs, checklists, prompts, and reports.
+    prefer_capabilities: [fast, cheap, json]
+    prefer:
+      - ollama:llama3.1
+      - groq:fast-general
+      - openrouter:free-general
+    fallback:
+      - ollama:phi3
