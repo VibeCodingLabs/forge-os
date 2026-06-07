@@ -24,12 +24,12 @@ const (
 )
 
 type menuItem struct {
-	Title       string
-	Desc        string
-	Command     []string
-	Next        screen
-	Quit        bool
-	Dangerous   bool
+	Title     string
+	Desc      string
+	Command   []string
+	Next      screen
+	Quit      bool
+	Dangerous bool
 }
 
 type model struct {
@@ -73,14 +73,14 @@ func (m model) menu() []menuItem {
 			{"Full Command Center Install", "Recovery base + ZSH + River/Waybar/Eww + performance + security + dictation + TUI", []string{"bash", "scripts/install-full-command-center.sh"}, 0, false, false},
 			{"Minimal Recovery Base", "Core Debian recovery packages, directories, scripts, and timers", []string{"bash", "-lc", "printf '2\\n\\n' | bash install.sh"}, 0, false, false},
 			{"ZSH Productivity Shell", "ZSH, completions, autosuggestions, syntax highlighting, Starship, fzf, zoxide", []string{"bash", "scripts/install-zsh-productivity.sh"}, 0, false, false},
-			{"Dev Runtime", "Python, Node, Go, Rust, SQLite and build tooling via shell installer", []string{"bash", "-lc", "printf '5\\n4\\n\\n19\\n15\\n' | bash bin/forge-menu.sh"}, 0, false, false},
-			{"Tauri Desktop Stack", "Rust/Tauri desktop prerequisites", []string{"bash", "-lc", "printf '5\\n5\\n\\n19\\n15\\n' | bash bin/forge-menu.sh"}, 0, false, false},
+			{"Dev Runtime", "Python, Node, Go, Rust, SQLite and build tooling via shell installer", []string{"bash", "-lc", "printf '5\\n4\\n\\n16\\n11\\n' | bash bin/forge-menu.sh"}, 0, false, false},
+			{"Tauri Desktop Stack", "Rust/Tauri desktop prerequisites", []string{"bash", "-lc", "printf '5\\n5\\n\\n16\\n11\\n' | bash bin/forge-menu.sh"}, 0, false, false},
 			{"Back", "Return to main menu", nil, screenMain, false, false},
 		}
 	case screenDesktop:
 		return []menuItem{
 			{"Desktop Command Center", "River/Sway/i3, Waybar, Eww, terminals, wallpaper, clipboard, portals", []string{"bash", "scripts/install-desktop-command-center.sh"}, 0, false, false},
-			{"Copy Desktop Configs", "Install repo configs to ~/.config for River, Waybar, Eww, terminals", []string{"bash", "-lc", "printf '7\\n\\n15\\n' | bash bin/forge-menu.sh"}, 0, false, false},
+			{"Copy Desktop Configs", "Install repo configs to ~/.config for River, Waybar, Eww, terminals", []string{"bash", "-lc", "printf '7\\n\\n11\\n' | bash bin/forge-menu.sh"}, 0, false, false},
 			{"Start River", "Launch River compositor from current TTY/session", []string{"bash", "-lc", "river"}, 0, false, false},
 			{"Start Eww Panel", "Open ForgeOS Eww panel widget", []string{"bash", "-lc", "eww daemon >/tmp/forge-eww.log 2>&1 || true; eww open forge-panel"}, 0, false, false},
 			{"Set Wallpaper", "Apply wallpaper helper from ~/.config/wallpapers", []string{"bash", "scripts/forge-wallpaper.sh"}, 0, false, false},
@@ -148,12 +148,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.status = "Returned to main menu"
 			}
 		case "up", "k":
-			if m.cursor > 0 { m.cursor-- }
+			if m.cursor > 0 {
+				m.cursor--
+			}
 		case "down", "j":
-			if m.cursor < len(m.items)-1 { m.cursor++ }
+			if m.cursor < len(m.items)-1 {
+				m.cursor++
+			}
 		case "enter":
 			item := m.items[m.cursor]
-			if item.Quit { return m, tea.Quit }
+			if item.Quit {
+				return m, tea.Quit
+			}
 			if item.Next != 0 || (item.Next == screenMain && item.Command == nil && item.Title == "Back") {
 				m.screen = item.Next
 				m.cursor = 0
@@ -174,7 +180,9 @@ func (m model) execute(item menuItem) tea.Cmd {
 	cmdArgs := append([]string{}, item.Command...)
 	root := m.root
 	return func() tea.Msg {
-		if len(cmdArgs) == 0 { return statusMsg("nothing to run") }
+		if len(cmdArgs) == 0 {
+			return statusMsg("nothing to run")
+		}
 		return runCmd(root, item.Title, cmdArgs[0], cmdArgs[1:]...)
 	}
 }
@@ -225,11 +233,15 @@ func (m model) View() string {
 	for i, item := range m.items {
 		cursor := "  "
 		line := itemStyle.Render(item.Title)
-		if item.Dangerous { line = warnStyle.Render(item.Title) }
+		if item.Dangerous {
+			line = warnStyle.Render(item.Title)
+		}
 		if m.cursor == i {
 			cursor = "▸ "
 			line = selectStyle.Render(item.Title)
-			if item.Dangerous { line = warnStyle.Render(item.Title) }
+			if item.Dangerous {
+				line = warnStyle.Render(item.Title)
+			}
 		}
 		b.WriteString(cursor + line)
 		if item.Desc != "" {
@@ -237,7 +249,8 @@ func (m model) View() string {
 		}
 		b.WriteString("\n")
 	}
-	b.WriteString("\n")	b.WriteString(helpStyle.Render(m.status))
+	b.WriteString("\n")
+	b.WriteString(helpStyle.Render(m.status))
 	return boxStyle.Render(b.String())
 }
 
