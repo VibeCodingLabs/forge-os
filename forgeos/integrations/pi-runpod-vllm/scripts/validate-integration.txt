@@ -1,0 +1,31 @@
+ForgeOS Pi RunPod vLLM validation checklist
+
+Use this as the first smoke test after configuring your local environment.
+
+1. Confirm files exist:
+   - .env.forgeos
+   - .forgeos/profiles/pi-runpod-vllm/pi.runpod.json
+   - .forgeos/profiles/pi-runpod-vllm/system-prompt.md
+   - forgeos/tool-gateway/tools.json
+   - forgeos/tool-gateway/permissions.yaml
+
+2. Confirm .env.forgeos contains:
+   - RUNPOD_API_KEY
+   - RUNPOD_ENDPOINT_ID
+   - RUNPOD_OPENAI_BASE_URL
+   - RUNPOD_MODEL
+   - FORGEOS_TOOL_GATEWAY_URL
+
+3. Confirm the agent loads the ForgeOS system prompt.
+
+4. Confirm the agent reads the required contracts before planning:
+   - contracts/openapi.yaml
+   - contracts/schema.sql
+
+5. Ask the agent to validate contracts before changing code.
+
+6. Ask for a tool action that is listed in tools.json and confirm it is routed through the gateway.
+
+7. Ask for a tool action that is not listed and confirm it is rejected or converted into a safe proposal.
+
+8. Confirm PROGRESS.md or the configured progress file is updated after the task.
