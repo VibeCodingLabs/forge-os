@@ -1,0 +1,38 @@
+version: 0.1.0
+name: pi-contract-wrapper-tool-policy
+
+default_mode: gateway_allowlist_only
+
+gateway:
+  registry: forgeos/tool-gateway/tools.json
+  permissions: forgeos/tool-gateway/permissions.yaml
+  openapi: forgeos/tool-gateway/openapi.yaml
+
+required_tools:
+  - forge.contracts.validate
+  - forge.openapi.validate
+  - forge.sqlite.validate
+  - forge.taskgraph.build
+  - forge.progress.update
+
+planned_tools:
+  - forge.openapi.generate_sdk
+  - forge.openapi.generate_server
+  - forge.cobra.generate_cli
+  - forge.arazzo.validate
+  - forge.arazzo.generate_runner
+  - forge.pi.compile_context
+  - forge.pi.run_contract_task
+
+rules:
+  use_gateway_for_tool_requests: true
+  validate_tool_inputs: true
+  validate_tool_outputs: true
+  log_tool_events: true
+  update_progress_after_tool_batch: true
+
+completion_gate:
+  require_contract_validation: true
+  require_openapi_validation: true
+  require_schema_validation: true
+  require_progress_event: true
