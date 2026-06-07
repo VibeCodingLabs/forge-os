@@ -1,0 +1,36 @@
+version: 0.1.0
+name: forgeos-arazzo-codegen
+
+source:
+  arazzo: contracts/arazzo.yaml
+  openapi: contracts/openapi.yaml
+
+purpose: Generate workflow runners, tests, and agent task plans from Arazzo workflows.
+
+outputs:
+  workflow_docs: generated/workflows/docs
+  workflow_runners: generated/workflows/runners
+  workflow_tests: generated/workflows/tests
+  agent_tasks: tasks/generated-from-arazzo.md
+
+workflow_generation:
+  each_workflow_should_generate:
+    - markdown_summary
+    - typed_input_model
+    - typed_output_model
+    - step_runner
+    - validation_test
+    - progress_event_template
+
+rules:
+  map_workflow_steps_to_openapi_operation_ids: true
+  require_success_criteria: true
+  require_failure_handling_notes: true
+  require_replayable_test_plan: true
+  do_not_invent_missing_operation_ids: true
+
+validation:
+  require_arazzo_file: true
+  require_openapi_file: true
+  require_operation_id_match: true
+  required_before_complete: true
