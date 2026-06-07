@@ -1,0 +1,46 @@
+version: 0.1.0
+name: forgeos-openapi-generator-matrix
+
+source:
+  openapi: contracts/openapi.yaml
+
+output_root: generated
+
+generators:
+  - id: typescript_fetch_client
+    generator: typescript-fetch
+    output: generated/sdks/typescript-fetch
+    purpose: Browser and Node TypeScript SDK.
+    additional_properties:
+      supportsES6: true
+      npmName: '@vibecodinglabs/forgeos-client'
+
+  - id: go_client
+    generator: go
+    output: generated/sdks/go
+    purpose: Go SDK for CLI, gateway, and services.
+    additional_properties:
+      packageName: forgeosclient
+
+  - id: python_client
+    generator: python
+    output: generated/sdks/python
+    purpose: Python SDK for automation workers and notebooks.
+    additional_properties:
+      packageName: forgeos_client
+
+  - id: go_server_stub
+    generator: go-server
+    output: generated/server/go
+    purpose: Go REST server scaffold for ForgeOS services.
+    additional_properties:
+      packageName: forgeosserver
+
+validation:
+  openapi_validate_tool: forge.openapi.validate
+  required_before_complete: true
+
+notes:
+  - Use OpenAPI Generator CLI or Docker equivalent from a local developer environment.
+  - Keep generated SDKs under generated/sdks unless the project contract overrides this.
+  - Commit generated outputs only when the project policy allows it.
