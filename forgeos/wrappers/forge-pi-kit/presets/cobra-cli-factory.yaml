@@ -1,0 +1,25 @@
+version: 0.1.0
+name: cobra-cli-factory
+summary: Generate and maintain Cobra/Go CLI commands from the Cobra contract.
+
+source:
+  cobra_contract: forgeos/wrappers/pi-contract-wrapper/cobra.contract.yaml
+
+targets:
+  root_command: cmd/forge
+  internal_commands: internal/cli
+
+steps:
+  - validate_cobra_contract
+  - map_commands_to_gateway_tools
+  - generate_command_scaffold
+  - add_flag_validation
+  - add help text
+  - add command tests
+  - update_progress
+
+rules:
+  cobra_contract_is_authority: true
+  every_command_maps_to_tool_or_service: true
+  flags_must_match_contract: true
+  generated_commands_need_tests: true
