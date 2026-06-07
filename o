@@ -1,0 +1,276 @@
+#!/usr/bin/env bash
+# ForgeOS one-command observability dashboard generator.
+# Usage: bash o
+set -Eeuo pipefail
+
+FORGE_HOME="${FORGE_HOME:-$HOME/.forge-os}"
+DB="$FORGE_HOME/observability/forge-observability.db"
+OUT_DIR="$FORGE_HOME/artifacts/reports"
+OUT="$OUT_DIR/observability.html"
+mkdir -p "$OUT_DIR"
+
+python3 - "$DB" "$OUT" <<'PY'
+import html
+import json
+import os
+import sqlite3
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+DB = Path(sys.argv[1]).expanduser()
+OUT = Path(sys.argv[2]).expanduser()
+FORGE_HOME = Path(os.environ.get("FORGE_HOME", Path.home() / ".forge-os")).expanduser()
+
+TABLES = [
+    "events",
+    "system_metrics",
+    "network_metrics",
+    "filesystem_events",
+    "agent_runs",
+    "model_calls",
+    "tool_calls",
+    "automation_runs",
+    "compiler_runs",
+    "artifacts",
+]
+
+def q(conn, sql, args=()):
+    try:
+        conn.row_factory = sqlite3.Row
+        return [dict(r) for r in conn.execute(sql, args).fetchall()]
+    except Exception as e:
+        return [{"error": str(e), "sql": sql}]
+
+def exists(conn, table):
+    try:
+        return conn.execute("SELECT name FROM sqlite_master WHERE type IN ('table','view') AND name=?", (table,)).fetchone() is not None
+    except Exception:
+        return False
+
+now = datetime.now(timezone.utc).isoformat()
+data = {"generated_at": now, "db": str(DB), "forge_home": str(FORGE_HOME), "tables": {}, "summary": {}}
+
+if DB.exists():
+    conn = sqlite3.connect(DB)
+    for t in TABLES:
+        if exists(conn, t):
+            data["summary"][t] = q(conn, f"SELECT COUNT(*) AS count FROM {t}")[0].get("count", 0)
+            data["tables"][t] = q(conn, f"SELECT * FROM {t} ORDER BY 1 DESC LIMIT 100")
+        else:
+            data["summary"][t] = 0
+            data["tables"][t] = []
+    data["recent_events"] = q(conn, "SELECT ts, source, type, project, agent, run_id, severity, message FROM events ORDER BY ts DESC LIMIT 50") if exists(conn, "events") else []
+    data["recent_tools"] = q(conn, "SELECT ts, project, agent, tool_name, status, exit_code, cwd FROM tool_calls ORDER BY ts DESC LIMIT 50") if exists(conn, "tool_calls") else []
+    data["model_costs"] = q(conn, "SELECT * FROM v_model_costs LIMIT 50") if exists(conn, "v_model_costs") else []
+    conn.close()
+else:
+    data["missing_db"] = True
+    data["recent_events"] = []
+    data["recent_tools"] = []
+    data["model_costs"] = []
+
+payload = json.dumps(data, ensure_ascii=False)
+
+html_doc = f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ForgeOS Observability Command Center</title>
+<style>
+:root {{
+  --bg: #080807;
+  --panel: rgba(24, 23, 20, 0.88);
+  --panel2: rgba(35, 32, 27, 0.92);
+  --text: #f3efe4;
+  --muted: #b7ad9b;
+  --line: rgba(240, 180, 90, 0.24);
+  --hot: #ffb45e;
+  --green: #9be879;
+  --red: #ff6b6b;
+  --blue: #87d7ff;
+  --shadow: rgba(0, 0, 0, 0.38);
+}}
+* {{ box-sizing: border-box; }}
+body {{
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 12% 8%, rgba(255,180,94,.18), transparent 24%),
+    radial-gradient(circle at 92% 12%, rgba(155,232,121,.10), transparent 22%),
+    linear-gradient(135deg, #080807, #11100e 45%, #050505);
+  min-height: 100vh;
+}}
+header {{
+  padding: 26px 28px 12px;
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: blur(18px);
+  background: rgba(8,8,7,.78);
+}}
+.brand {{ display: flex; align-items: center; justify-content: space-between; gap: 16px; }}
+h1 {{ margin: 0; font-size: clamp(24px, 3vw, 44px); letter-spacing: -1.5px; }}
+.sub {{ color: var(--muted); margin-top: 8px; font-size: 13px; }}
+.badge {{ border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 8px 12px; color: var(--hot); box-shadow: 0 12px 40px var(--shadow); }}
+main {{ padding: 22px 28px 40px; }}
+.grid {{ display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }}
+.card {{
+  background: linear-gradient(180deg, var(--panel), rgba(14,14,12,.9));
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 18px 50px var(--shadow);
+  overflow: hidden;
+}}
+.kpi {{ grid-column: span 3; min-height: 120px; }}
+.wide {{ grid-column: span 8; }}
+.side {{ grid-column: span 4; }}
+.full {{ grid-column: 1 / -1; }}
+.card h2 {{ margin: 0 0 10px; font-size: 15px; color: var(--hot); text-transform: uppercase; letter-spacing: .12em; }}
+.value {{ font-size: 34px; font-weight: 900; letter-spacing: -1px; }}
+.label {{ color: var(--muted); font-size: 12px; margin-top: 6px; }}
+.toolbar {{ display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 0; }}
+button, .button {{
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255,180,94,.16), rgba(255,180,94,.05));
+  color: var(--text);
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: none;
+}}
+button:hover, .button:hover {{ border-color: rgba(255,180,94,.66); transform: translateY(-1px); }}
+input {{ width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: rgba(0,0,0,.28); color: var(--text); font: inherit; }}
+table {{ width: 100%; border-collapse: collapse; font-size: 12px; }}
+th, td {{ border-bottom: 1px solid rgba(255,255,255,.06); padding: 9px 8px; text-align: left; vertical-align: top; }}
+th {{ color: var(--hot); font-weight: 700; position: sticky; top: 106px; background: #11100e; }}
+td {{ color: #e8dfcf; }}
+.status-ok {{ color: var(--green); }}
+.status-bad {{ color: var(--red); }}
+.status-warn {{ color: var(--hot); }}
+pre {{ white-space: pre-wrap; word-break: break-word; background: rgba(0,0,0,.32); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 12px; color: #e7dcc8; overflow: auto; max-height: 360px; }}
+.tabs {{ display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }}
+.tab {{ opacity: .78; }}
+.tab.active {{ background: rgba(155,232,121,.12); border-color: rgba(155,232,121,.35); opacity: 1; }}
+@media (max-width: 1100px) {{ .kpi {{ grid-column: span 6; }} .wide, .side {{ grid-column: 1 / -1; }} }}
+@media (max-width: 720px) {{ main, header {{ padding-left: 14px; padding-right: 14px; }} .kpi {{ grid-column: 1 / -1; }} }}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div>
+      <h1>ForgeOS Observability</h1>
+      <div class="sub">Local-first command center · generated <span id="generatedAt"></span> · DB <span id="dbPath"></span></div>
+    </div>
+    <div class="badge" id="healthBadge">BOOTING</div>
+  </div>
+  <div class="toolbar">
+    <button onclick="copyCmd('forge-observe')">Copy: forge-observe</button>
+    <button onclick="copyCmd('forge-doctor')">Copy: forge-doctor</button>
+    <button onclick="copyCmd('systemctl --user list-timers')">Copy: timers</button>
+    <button onclick="copyCmd('sudo ufw status verbose')">Copy: firewall</button>
+    <button onclick="location.reload()">Reload</button>
+  </div>
+</header>
+<main>
+  <section class="grid" id="kpis"></section>
+  <section class="grid" style="margin-top:16px">
+    <div class="card wide">
+      <h2>Recent Events</h2>
+      <input id="eventFilter" placeholder="filter events..." oninput="renderEvents()" />
+      <div style="overflow:auto; max-height:520px; margin-top:12px"><table id="eventsTable"></table></div>
+    </div>
+    <div class="card side">
+      <h2>Control Deck</h2>
+      <p class="label">Browser security blocks direct shell execution. These buttons copy safe commands. Real control should go through a local Tauri/Rust sidecar or authenticated local API later.</p>
+      <div class="toolbar">
+        <button onclick="copyCmd('forge-doctor')">Doctor</button>
+        <button onclick="copyCmd('forge-observe')">Observe</button>
+        <button onclick="copyCmd('tail -120 ~/.forge-os/logs/*.log')">Tail Logs</button>
+        <button onclick="copyCmd('sqlite3 ~/.forge-os/observability/forge-observability.db \'.tables\'')">DB Tables</button>
+        <button onclick="copyCmd('systemctl --user list-timers')">User Timers</button>
+        <button onclick="copyCmd('sudo systemctl status fail2ban auditd apparmor --no-pager')">Security</button>
+        <button onclick="copyCmd('bash ~/forge-os/o')">Regenerate</button>
+      </div>
+      <h2 style="margin-top:18px">Copied Command</h2>
+      <pre id="copied">Nothing copied yet.</pre>
+    </div>
+    <div class="card full">
+      <h2>Tables</h2>
+      <div class="tabs" id="tabs"></div>
+      <input id="tableFilter" placeholder="filter current table..." oninput="renderTable()" />
+      <div style="overflow:auto; max-height:620px; margin-top:12px"><table id="dataTable"></table></div>
+    </div>
+    <div class="card full">
+      <h2>Raw Snapshot</h2>
+      <pre id="raw"></pre>
+    </div>
+  </section>
+</main>
+<script id="forge-data" type="application/json">{html.escape(payload)}</script>
+<script>
+const DATA = JSON.parse(document.getElementById('forge-data').textContent);
+let currentTable = 'events';
+function esc(x) {{ return String(x ?? '').replace(/[&<>"']/g, m => ({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[m])); }}
+function copyCmd(cmd) {{ navigator.clipboard?.writeText(cmd).catch(()=>{{}}); document.getElementById('copied').textContent = cmd; }}
+function kpi(name, val, label) {{ return `<div class="card kpi"><h2>${{esc(name)}}</h2><div class="value">${{esc(val)}}</div><div class="label">${{esc(label)}}</div></div>`; }}
+function renderKpis() {{
+  const s = DATA.summary || {{}};
+  const total = Object.values(s).reduce((a,b)=>a+(Number(b)||0),0);
+  document.getElementById('kpis').innerHTML = [
+    kpi('Events', s.events || 0, 'system + agent event rows'),
+    kpi('Tool Calls', s.tool_calls || 0, 'CLI/MCP/shell tool rows'),
+    kpi('Model Calls', s.model_calls || 0, 'provider/model telemetry rows'),
+    kpi('Artifacts', s.artifacts || 0, 'tracked generated outputs'),
+    kpi('Agents', s.agent_runs || 0, 'agent run records'),
+    kpi('Automations', s.automation_runs || 0, 'timer/daemon/job records'),
+    kpi('Compilers', s.compiler_runs || 0, 'codegen/compiler records'),
+    kpi('Total Rows', total, 'all tracked core rows'),
+  ].join('');
+}}
+function rowsToTable(rows) {{
+  if (!rows || !rows.length) return '<tr><td>No rows yet.</td></tr>';
+  const cols = [...new Set(rows.flatMap(r => Object.keys(r)))];
+  return `<thead><tr>${{cols.map(c=>`<th>${{esc(c)}}</th>`).join('')}}</tr></thead><tbody>` +
+    rows.map(r => `<tr>${{cols.map(c=>`<td>${{esc(r[c])}}</td>`).join('')}}</tr>`).join('') + '</tbody>';
+}}
+function renderEvents() {{
+  const f = document.getElementById('eventFilter').value.toLowerCase();
+  const rows = (DATA.recent_events || []).filter(r => JSON.stringify(r).toLowerCase().includes(f));
+  document.getElementById('eventsTable').innerHTML = rowsToTable(rows);
+}}
+function renderTabs() {{
+  const tables = Object.keys(DATA.tables || {{}});
+  document.getElementById('tabs').innerHTML = tables.map(t => `<button class="tab ${{t===currentTable?'active':''}}" onclick="currentTable='${{t}}'; renderTabs(); renderTable();">${{esc(t)}} (${{(DATA.tables[t]||[]).length}})</button>`).join('');
+}}
+function renderTable() {{
+  const f = document.getElementById('tableFilter').value.toLowerCase();
+  const rows = (DATA.tables?.[currentTable] || []).filter(r => JSON.stringify(r).toLowerCase().includes(f));
+  document.getElementById('dataTable').innerHTML = rowsToTable(rows);
+}}
+function init() {{
+  document.getElementById('generatedAt').textContent = DATA.generated_at || 'unknown';
+  document.getElementById('dbPath').textContent = DATA.db || 'unknown';
+  document.getElementById('healthBadge').textContent = DATA.missing_db ? 'DB MISSING' : 'LOCAL ONLINE';
+  document.getElementById('healthBadge').style.color = DATA.missing_db ? 'var(--red)' : 'var(--green)';
+  renderKpis(); renderEvents(); renderTabs(); renderTable();
+  document.getElementById('raw').textContent = JSON.stringify(DATA, null, 2);
+}}
+init();
+</script>
+</body>
+</html>"""
+OUT.write_text(html_doc, encoding="utf-8")
+print(OUT)
+PY
+
+printf '\nDone. Dashboard written to:\n  %s\n\n' "$OUT"
+printf 'Open locally with a browser after GUI is available, or serve it on LAN with:\n'
+printf '  cd "%s" && python3 -m http.server 8788\n\n' "$OUT_DIR"
+printf 'Then open:\n  http://127.0.0.1:8788/observability.html\n'
