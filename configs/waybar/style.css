@@ -1,0 +1,62 @@
+* {
+  border: none;
+  border-radius: 0;
+  font-family: "JetBrains Mono", "FiraCode Nerd Font", monospace;
+  font-size: 12px;
+  min-height: 0;
+}
+
+window#waybar {
+  background: rgba(17, 17, 17, 0.92);
+  color: #eceff4;
+  border-bottom: 1px solid rgba(216, 129, 112, 0.45);
+}
+
+#tags button {
+  color: #81a1c1;
+  padding: 0 8px;
+  margin: 3px 2px;
+  background: rgba(59, 66, 82, 0.55);
+  border-radius: 6px;
+}
+
+#tags button.focused,
+#tags button.occupied {
+  color: #111111;
+  background: #d08770;
+}
+
+#window {
+  color: #d8dee9;
+  padding: 0 10px;
+}
+
+#clock,
+#pulseaudio,
+#network,
+#cpu,
+#memory,
+#temperature,
+#battery,
+#tray,
+#custom-forge {
+  padding: 0 10px;
+  margin: 4px 3px;
+  background: rgba(46, 52, 64, 0.85);
+  border-radius: 8px;
+}
+
+#battery.warning,
+#temperature.critical {
+  color: #ebcb8b;
+}
+
+#battery.critical {
+  color: #bf616a;
+}
+
+#custom-forge {
+  color: #111111;
+  background: #a3be8c;
+  font-weight: 700;
+}
