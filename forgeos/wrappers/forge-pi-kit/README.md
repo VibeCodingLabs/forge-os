@@ -4,7 +4,15 @@
 
 It provides the batteries-included layer for Pi agent workflows without colliding with the existing `oh-my-pi` project name.
 
-It should provide:
+## Start here
+
+For copy/paste setup commands, read:
+
+```bash
+cat forgeos/wrappers/forge-pi-kit/QUICKSTART.md
+```
+
+## What it provides
 
 - ready-to-use Pi profiles
 - RunPod/vLLM connection templates
@@ -33,6 +41,7 @@ The wrapper defines how Pi must behave.
 ```txt
 forgeos/wrappers/forge-pi-kit/
   README.md
+  QUICKSTART.md
   profiles/default.yaml
   profiles/runpod-vllm.yaml
   presets/contract-first.yaml
@@ -71,21 +80,67 @@ CLI contract: Cobra/Go
 Codegen: OpenAPI Generator
 ```
 
-## First local use
+## Quick local setup
 
 From the repository root:
 
-```txt
-Read these files first:
-
-forgeos/wrappers/pi-contract-wrapper/README.md
-forgeos/wrappers/pi-contract-wrapper/wrapper.contract.yaml
-forgeos/wrappers/forge-pi-kit/profiles/runpod-vllm.yaml
-forgeos/wrappers/forge-pi-kit/prompts/forge-pi-kit.md
+```bash
+git pull
+mkdir -p .forgeos/profiles/pi-runpod-vllm .forgeos/context .forgeos/logs
+cp forgeos/integrations/pi-runpod-vllm/.env.example .env.forgeos
+cp forgeos/integrations/pi-runpod-vllm/config/pi.runpod.example.json .forgeos/profiles/pi-runpod-vllm/pi.runpod.json
+cp forgeos/wrappers/pi-contract-wrapper/prompts/pi-contract-system.md .forgeos/profiles/pi-runpod-vllm/pi-contract-system.md
+cp forgeos/wrappers/forge-pi-kit/prompts/forge-pi-kit.md .forgeos/profiles/pi-runpod-vllm/forge-pi-kit.md
 ```
 
-Then configure the RunPod environment template under:
+Then edit:
 
-```txt
-forgeos/integrations/pi-runpod-vllm/.env.example
+```bash
+nano .env.forgeos
+```
+
+Required values:
+
+```bash
+RUNPOD_API_KEY=your_runpod_api_key
+RUNPOD_ENDPOINT_ID=your_runpod_endpoint_id
+RUNPOD_MODEL=your_vllm_model_name
+FORGEOS_PROJECT_ROOT=$PWD
+FORGEOS_TOOL_GATEWAY_URL=http://127.0.0.1:8787
+```
+
+## First manual context pack
+
+Until the Go CLI command exists, create the first context pack manually:
+
+```bash
+cat \
+  forgeos/wrappers/pi-contract-wrapper/prompts/pi-contract-system.md \
+  forgeos/wrappers/forge-pi-kit/prompts/forge-pi-kit.md \
+  contracts/schema.sql \
+  contracts/openapi.yaml \
+  contracts/arazzo.yaml \
+  contracts/cobra.yaml \
+  forgeos/tool-gateway/tools.json \
+  forgeos/tool-gateway/permissions.yaml \
+  > .forgeos/context/pi-contract-context.md
+```
+
+Then paste the first task from:
+
+```bash
+cat forgeos/wrappers/forge-pi-kit/QUICKSTART.md
+```
+
+## Intended final CLI
+
+These commands are the target interface once the ForgeOS Go CLI is implemented:
+
+```bash
+forge contracts validate
+forge pi compile-context --profile forge-pi-kit-runpod-vllm
+forge pi run --task "validate contracts and build task graph"
+forge generate sdk --language go
+forge generate sdk --language typescript
+forge generate workflow --workflow <workflow-id>
 ```
