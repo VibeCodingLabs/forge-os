@@ -15,6 +15,7 @@ bash "$ROOT_DIR/install.sh" <<'MENU' || true
 MENU
 
 run_script install-zsh-productivity.sh
+run_script install-observability-center.sh
 run_script install-desktop-command-center.sh
 run_script install-performance-tuning.sh
 run_script install-security-hardening.sh
@@ -25,7 +26,12 @@ run_script install-python-rich-ui.sh
 cat > "$FORGE_HOME/state/full-command-center.env" <<STATE
 full_command_center_installed=$(date --iso-8601=seconds)
 log=$LOG_FILE
+observability=$FORGE_HOME/observability/forge-observability.db
 STATE
+
+if command -v forge-event >/dev/null 2>&1; then
+  forge-event full.command_center.installed "ForgeOS full command center install complete" >/dev/null || true
+fi
 
 log "ForgeOS full command center install complete."
 log "Recommended next step: reboot, log in again, then launch River from a TTY with: river"
