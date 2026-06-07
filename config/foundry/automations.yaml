@@ -1,0 +1,100 @@
+version: 0.1.0
+project: forge-foundry
+status: planned
+source_doc: docs/foundry/09_AUTOMATION_FACTORY.md
+
+pipeline:
+  canonical: capture -> mirror -> contract -> tools -> agents -> skills -> sub_agents -> cronjobs -> watchdogs -> heartbeats -> github_actions -> issue_triage -> pull_requests -> code_review -> apis -> code -> commands -> workflows -> applications -> automations -> products
+
+output_classes:
+  - id: OUT-TOOLS
+    name: Tools
+    examples:
+      - cobra_cli
+      - rest_api_wrapper
+      - mcp_tool
+      - sdk_function
+      - shell_command
+      - tauri_command
+      - hono_route
+      - fastapi_route
+
+  - id: OUT-AGENTS
+    name: Agents
+    examples:
+      - pydanticai_agent
+      - reviewer_agent
+      - documentation_agent
+      - capture_agent
+      - compiler_agent
+      - security_agent
+
+  - id: OUT-SKILLS
+    name: Skills
+    examples:
+      - capture-site
+      - mirror-api
+      - generate-openapi
+      - generate-mcp
+      - triage-issues
+      - review-pr
+      - summarize-run
+      - package-deliverable
+
+  - id: OUT-SUBAGENTS
+    name: Sub Agents
+    examples:
+      - scout
+      - capture_worker
+      - normalizer
+      - compiler
+      - reviewer
+      - security
+      - archivist
+      - operator
+
+  - id: OUT-SCHEDULED-AUTOMATION
+    name: Cronjobs, Watchdogs, and Heartbeats
+    examples:
+      - nightly_repo_scan
+      - stale_mirror_detection
+      - jetson_heartbeat
+      - failed_job_watchdog
+      - token_usage_report
+      - dependency_audit
+
+  - id: OUT-GITHUB-AUTOMATION
+    name: GitHub Actions and Repo Automation
+    examples:
+      - validate_openapi
+      - validate_yaml_registries
+      - create_issue_from_failed_run
+      - triage_issue
+      - review_pull_request
+      - summarize_diff
+      - block_missing_tests
+
+  - id: OUT-APPLICATIONS
+    name: Applications
+    examples:
+      - tauri_dashboard
+      - web_dashboard
+      - internal_api_explorer
+      - workflow_builder
+      - capture_job_manager
+      - llm_wiki_browser
+      - monetization_package_generator
+
+definition_of_done:
+  - trigger_defined
+  - typed_inputs
+  - typed_outputs
+  - policy_defined
+  - logs_emitted
+  - failure_mode_documented
+  - manual_override_exists
+  - test_or_dry_run_exists
+  - owner_agent_defined
+  - source_mirror_linked
+  - source_contract_linked
+  - docs_and_examples_exist
