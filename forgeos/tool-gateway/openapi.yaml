@@ -1,0 +1,78 @@
+openapi: 3.1.0
+info:
+  title: ForgeOS Tool Gateway
+  version: 0.1.0
+  description: Local gateway contract for schema-validated ForgeOS agent tool calls.
+servers:
+  - url: http://127.0.0.1:8787
+paths:
+  /health:
+    get:
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Gateway health status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required: [ok]
+  /tools/{toolName}:
+    post:
+      operationId: callTool
+      parameters:
+        - name: toolName
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Tool result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolResult'
+        '400':
+          description: Invalid request
+        '403':
+          description: Tool not allowed
+        '404':
+          description: Tool not found
+components:
+  schemas:
+    ToolResult:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        tool:
+          type: string
+        result:
+          type:
+            - object
+            - 'null'
+          additionalProperties: true
+        errors:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            type: string
+      required:
+        - ok
+        - tool
+        - errors
+        - warnings
