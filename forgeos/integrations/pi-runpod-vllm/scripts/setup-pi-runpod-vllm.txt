@@ -1,0 +1,13 @@
+ForgeOS Pi RunPod vLLM setup notes
+
+Purpose
+Create a local ForgeOS profile directory, copy the RunPod configuration template, copy the ForgeOS agent system prompt, and create a local environment file from the checked-in example.
+
+Manual commands from the repository root:
+
+mkdir -p .forgeos/profiles/pi-runpod-vllm .forgeos/logs
+cp forgeos/integrations/pi-runpod-vllm/.env.example .env.forgeos
+cp forgeos/integrations/pi-runpod-vllm/config/pi.runpod.example.json .forgeos/profiles/pi-runpod-vllm/pi.runpod.json
+cp forgeos/integrations/pi-runpod-vllm/prompts/forgeos-system-prompt.md .forgeos/profiles/pi-runpod-vllm/system-prompt.md
+
+Then edit .env.forgeos and add your RunPod endpoint values.
