@@ -14,11 +14,14 @@ CYAN='\033[0;36m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 log(){ printf "%b\n" "$*" | tee -a "$LOG_FILE"; }
 run(){ log "${CYAN}▶ $*${NC}"; "$@" 2>&1 | tee -a "$LOG_FILE"; }
 need_sudo(){ if [[ $EUID -ne 0 ]]; then SUDO=sudo; else SUDO=""; fi; }
+apt_has(){ apt-cache show "$1" >/dev/null 2>&1; }
+install_optional_pkg(){ local pkg="$1"; if apt_has "$pkg"; then run $SUDO apt-get install -y "$pkg" || log "${YELLOW}[WARN] optional package failed: $pkg${NC}"; else log "${YELLOW}[WARN] optional package unavailable: $pkg${NC}"; fi; }
 need_sudo
 
 log "=== ForgeOS observability center install started: $(date --iso-8601=seconds) ==="
 run $SUDO apt-get update
-run $SUDO apt-get install -y sqlite3 jq yq ripgrep fd-find bat btop htop glances sysstat python3 python3-venv python3-pip pipx graphviz entr watchexec
+run $SUDO apt-get install -y sqlite3 jq yq ripgrep fd-find bat btop htop glances sysstat python3 python3-venv python3-pip pipx graphviz entr
+install_optional_pkg watchexec
 
 DB="$OBS_DIR/forge-observability.db"
 cp "$ROOT_DIR/observability/schema.sql" "$OBS_DIR/schema.sql"
