@@ -1,0 +1,25 @@
+ForgeOS River development environment notes
+
+Purpose
+Prepare a Linux workstation for experimenting with the River Wayland compositor.
+
+Arch-family command:
+
+sudo pacman -S river wayland wayland-protocols wlroots foot wmenu mako grim slurp wl-clipboard xdg-desktop-portal-wlr
+
+Debian/Ubuntu/Parrot-family base packages:
+
+sudo apt update
+sudo apt install -y wayland-protocols foot mako-notifier grim slurp wl-clipboard xdg-desktop-portal-wlr
+
+Debian-family note
+River may not be available in every release repository. If it is missing, use the River upstream build instructions for your distro version.
+
+Config install commands:
+
+mkdir -p ~/.config/river
+cp forgeos/desktop/river/config/init ~/.config/river/init
+chmod +x ~/.config/river/init
+
+First launch
+Log out to a TTY or display manager session and start River according to your distro/session manager.
