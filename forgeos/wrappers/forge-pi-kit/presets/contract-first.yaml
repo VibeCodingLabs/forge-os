@@ -1,0 +1,25 @@
+version: 0.1.0
+name: contract-first
+summary: Default preset for any ForgeOS task.
+
+steps:
+  - read_schema_contract
+  - read_openapi_contract
+  - read_arazzo_contract
+  - read_cobra_contract
+  - validate_contracts
+  - plan_vertical_slice
+  - implement_from_contracts
+  - validate_output
+  - update_progress
+
+required_files:
+  - contracts/schema.sql
+  - contracts/openapi.yaml
+  - contracts/arazzo.yaml
+  - contracts/cobra.yaml
+
+completion_gate:
+  contracts_checked: true
+  output_validated: true
+  progress_updated: true
