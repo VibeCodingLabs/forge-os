@@ -1,0 +1,54 @@
+# Forge AI Gateway daily automation policy
+
+automations:
+  morning_brief:
+    enabled: true
+    task_type: automation
+    schedule: daily_morning
+    request_budget: 8
+    description: Summarize yesterday, identify blockers, and create a useful daily plan.
+    artifacts:
+      - ~/.forge-os/ai-gateway/reports/morning-brief.md
+
+  provider_health:
+    enabled: true
+    task_type: monitoring
+    schedule: every_10_minutes
+    request_budget: 0
+    description: Check enabled provider configuration, env vars, and local endpoint health.
+    artifacts:
+      - ~/.forge-os/ai-gateway/reports/provider-health.json
+
+  quota_check:
+    enabled: true
+    task_type: monitoring
+    schedule: every_15_minutes
+    request_budget: 0
+    description: Summarize request counts, daily usage, cache hits, failures, and fallback events.
+    artifacts:
+      - ~/.forge-os/ai-gateway/reports/quota-check.json
+
+  model_catalog_refresh:
+    enabled: false
+    task_type: research
+    schedule: daily
+    request_budget: 4
+    description: Refresh provider docs/model metadata. Disabled until scraper implementation is added.
+    artifacts:
+      - ~/.forge-os/ai-gateway/reports/model-refresh.md
+
+  nightly_factory:
+    enabled: true
+    task_type: automation
+    schedule: nightly
+    request_budget: 12
+    description: Use remaining free/local capacity for docs, tests, templates, README improvements, and backlog triage.
+    artifacts:
+      - ~/.forge-os/ai-gateway/reports/nightly-factory.md
+
+rules:
+  prefer_cache: true
+  prefer_local_models_for_easy_work: true
+  preserve_best_free_models_for_hard_tasks: true
+  never_store_api_keys_in_repo: true
+  require_approval_for_sudo_or_destructive_actions: true
