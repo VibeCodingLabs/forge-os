@@ -13,6 +13,7 @@ log(){ printf "%b\n" "$*" | tee -a "$LOG_FILE"; }
 run(){ log "${CYAN}▶ $*${NC}"; "$@" 2>&1 | tee -a "$LOG_FILE"; }
 need_sudo(){ if [[ $EUID -ne 0 ]]; then SUDO=sudo; else SUDO=""; fi; }
 has(){ command -v "$1" >/dev/null 2>&1; }
+apt_package_exists(){ apt-cache show "$1" >/dev/null 2>&1; }
 
 banner(){
   clear || true
@@ -25,7 +26,34 @@ banner(){
 pause(){ printf "\nPress Enter to continue..."; read -r _; }
 apt_update(){ need_sudo; run $SUDO apt-get update; }
 install_apt(){ need_sudo; apt_update; run $SUDO apt-get install -y "$@"; }
-install_apt_optional(){ need_sudo; apt_update; run $SUDO apt-get install -y "$@" || log "${YELLOW}Optional package install skipped/failed: $*${NC}"; }
+install_apt_optional(){
+  need_sudo
+  apt_update
+  local pkg
+  for pkg in "$@"; do
+    if apt_package_exists "$pkg"; then
+      run $SUDO apt-get install -y "$pkg" || log "${YELLOW}Optional package install failed: $pkg${NC}"
+    else
+      log "${YELLOW}Optional package unavailable in enabled repos: $pkg${NC}"
+    fi
+  done
+}
+install_apt_first_available(){
+  need_sudo
+  apt_update
+  local label="$1"
+  shift
+  local pkg
+  for pkg in "$@"; do
+    if apt_package_exists "$pkg"; then
+      run $SUDO apt-get install -y "$pkg"
+      log "${GREEN}Installed $label package: $pkg${NC}"
+      return 0
+    fi
+  done
+  log "${RED}No available package found for $label. Tried: $*${NC}"
+  return 1
+}
 
 preflight(){
   banner
@@ -95,10 +123,9 @@ enable_timers(){
   log "${GREEN}ForgeOS user timers enabled.${NC}"
 }
 
-install_tty_autostart(){
+install_autostart_block(){
+  local profile="$1"
   local marker_start="# >>> ForgeOS River tty1 autostart >>>"
-  local marker_end="# <<< ForgeOS River tty1 autostart <<<"
-  local profile="$HOME/.bash_profile"
   touch "$profile"
   if grep -qF "$marker_start" "$profile"; then
     log "${YELLOW}TTY autostart already present in $profile${NC}"
@@ -106,13 +133,22 @@ install_tty_autostart(){
   fi
   cat >>"$profile" <<'EOF'
 # >>> ForgeOS River tty1 autostart >>>
-if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ] && command -v river >/dev/null 2>&1; then
+# Set FORGE_NO_RIVER_AUTOSTART=1 before login to bypass this block.
+if [ "${FORGE_NO_RIVER_AUTOSTART:-0}" != "1" ] && [ -z "${WAYLAND_DISPLAY:-}" ] && [ "$(tty)" = "/dev/tty1" ] && command -v river >/dev/null 2>&1; then
   mkdir -p "$HOME/.forge-os/logs/river"
   exec river > "$HOME/.forge-os/logs/river/river-tty.log" 2>&1
 fi
 # <<< ForgeOS River tty1 autostart <<<
 EOF
   log "${GREEN}TTY1 River autostart added to $profile.${NC}"
+}
+
+install_tty_autostart(){
+  install_autostart_block "$HOME/.profile"
+  [[ -f "$HOME/.bash_profile" ]] && install_autostart_block "$HOME/.bash_profile"
+  if has zsh || [[ -f "$HOME/.zprofile" ]]; then
+    install_autostart_block "$HOME/.zprofile"
+  fi
 }
 
 install_zsh_productivity(){ bash "$ROOT_DIR/scripts/install-zsh-productivity.sh"; }
@@ -134,7 +170,7 @@ install_river_desktop(){
   install_scripts
   install_apt \
     river rivertile \
-    waybar mako wofi rofi \
+    waybar wofi rofi \
     swayidle swaylock grim slurp wl-clipboard \
     xdg-desktop-portal xdg-desktop-portal-wlr \
     dbus-user-session xwayland \
@@ -142,6 +178,7 @@ install_river_desktop(){
     brightnessctl playerctl \
     fonts-noto-color-emoji fonts-jetbrains-mono \
     foot kitty
+  install_apt_first_available "Wayland notification daemon" mako mako-notifier
   install_apt_optional cliphist fuzzel wlopm swww kanshi wev xwaylandvideobridge
   copy_river_configs
   enable_timers
