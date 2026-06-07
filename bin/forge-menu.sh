@@ -25,6 +25,7 @@ banner(){
 pause(){ printf "\nPress Enter to continue..."; read -r _; }
 apt_update(){ need_sudo; run $SUDO apt-get update; }
 install_apt(){ need_sudo; apt_update; run $SUDO apt-get install -y "$@"; }
+install_apt_optional(){ need_sudo; apt_update; run $SUDO apt-get install -y "$@" || log "${YELLOW}Optional package install skipped/failed: $*${NC}"; }
 
 preflight(){
   banner
@@ -33,6 +34,13 @@ preflight(){
   log "User: $(id -un)"
   log "Kernel: $(uname -srmo)"
   log "Debian: $(cat /etc/debian_version 2>/dev/null || echo unknown)"
+  if [[ -r /etc/os-release ]]; then
+    # shellcheck disable=SC1091
+    . /etc/os-release
+    log "OS: ${PRETTY_NAME:-unknown}"
+    log "Codename: ${VERSION_CODENAME:-unknown}"
+    [[ "${VERSION_CODENAME:-}" == "trixie" ]] || log "${YELLOW}Target profile is Debian 13 Trixie. Continue only if you know this host is compatible.${NC}"
+  fi
   log "Shell: $SHELL"
   log "Disk:"
   df -h / "$HOME" 2>/dev/null | tee -a "$LOG_FILE" || true
@@ -46,6 +54,7 @@ preflight(){
 
 setup_dirs(){
   mkdir -p "$FORGE_HOME"/{bin,configs,logs,state,sandboxes,worktrees,observability,themes,telemetry,cache,venvs}
+  mkdir -p "$FORGE_HOME/logs"/{river,obs,perf}
   mkdir -p "$HOME/forge-os"/{projects,worktrees,vaults,sandboxes,downloads}
   log "${GREEN}Workspace directories created.${NC}"
 }
@@ -62,9 +71,18 @@ copy_configs(){
   log "${GREEN}Terminal and shell configs copied.${NC}"
 }
 
+copy_river_configs(){
+  mkdir -p "$HOME/.config/river" "$HOME/.config/waybar" "$FORGE_HOME/logs/river" "$HOME/forge-os/downloads"
+  cp "$ROOT_DIR/configs/river/init" "$HOME/.config/river/init"
+  chmod +x "$HOME/.config/river/init"
+  cp -n "$ROOT_DIR/configs/waybar/config" "$HOME/.config/waybar/config" 2>/dev/null || true
+  log "${GREEN}River and Waybar configs copied.${NC}"
+}
+
 install_scripts(){
   install -m 0755 "$ROOT_DIR/scripts/forge-heartbeat.sh" "$HOME/.local/bin/forge-heartbeat" 2>/dev/null || true
   install -m 0755 "$ROOT_DIR/scripts/forge-observer.sh" "$HOME/.local/bin/forge-observer" 2>/dev/null || true
+  install -m 0755 "$ROOT_DIR/scripts/forge-river-doctor.sh" "$HOME/.local/bin/forge-river-doctor" 2>/dev/null || true
   log "${GREEN}Local Forge scripts installed.${NC}"
 }
 
@@ -75,6 +93,26 @@ enable_timers(){
   systemctl --user daemon-reload || true
   systemctl --user enable --now forge-heartbeat.timer forge-observer.timer || true
   log "${GREEN}ForgeOS user timers enabled.${NC}"
+}
+
+install_tty_autostart(){
+  local marker_start="# >>> ForgeOS River tty1 autostart >>>"
+  local marker_end="# <<< ForgeOS River tty1 autostart <<<"
+  local profile="$HOME/.bash_profile"
+  touch "$profile"
+  if grep -qF "$marker_start" "$profile"; then
+    log "${YELLOW}TTY autostart already present in $profile${NC}"
+    return 0
+  fi
+  cat >>"$profile" <<'EOF'
+# >>> ForgeOS River tty1 autostart >>>
+if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ] && command -v river >/dev/null 2>&1; then
+  mkdir -p "$HOME/.forge-os/logs/river"
+  exec river > "$HOME/.forge-os/logs/river/river-tty.log" 2>&1
+fi
+# <<< ForgeOS River tty1 autostart <<<
+EOF
+  log "${GREEN}TTY1 River autostart added to $profile.${NC}"
 }
 
 install_zsh_productivity(){ bash "$ROOT_DIR/scripts/install-zsh-productivity.sh"; }
@@ -91,7 +129,34 @@ install_terminal_stack(){
   copy_configs
 }
 
-install_desktop_lab(){ install_apt i3 sway waybar wofi rofi mako grim slurp swayidle swaylock xwayland xdg-desktop-portal xdg-desktop-portal-wlr dbus-user-session wireplumber pipewire pipewire-pulse network-manager; }
+install_river_desktop(){
+  setup_dirs
+  install_scripts
+  install_apt \
+    river rivertile \
+    waybar mako wofi rofi \
+    swayidle swaylock grim slurp wl-clipboard \
+    xdg-desktop-portal xdg-desktop-portal-wlr \
+    dbus-user-session xwayland \
+    pipewire pipewire-pulse wireplumber \
+    brightnessctl playerctl \
+    fonts-noto-color-emoji fonts-jetbrains-mono \
+    foot kitty
+  install_apt_optional cliphist fuzzel wlopm swww kanshi wev xwaylandvideobridge
+  copy_river_configs
+  enable_timers
+  log "${GREEN}River desktop installed.${NC}"
+  log "Launch manually from TTY with: river"
+  log "Run verification with: forge-river-doctor"
+}
+
+install_river_autostart(){
+  install_river_desktop
+  install_tty_autostart
+  log "${GREEN}River will auto-start on tty1 after next login.${NC}"
+}
+
+install_desktop_lab(){ install_river_desktop; }
 install_dev_runtime(){ install_apt python3 python3-pip python3-venv pipx nodejs npm golang-go cargo rustc clang cmake ninja-build libssl-dev pkg-config sqlite3 libsqlite3-dev shellcheck shfmt; has npm && run npm install -g pnpm yarn || true; has cargo && run cargo install cargo-audit cargo-edit cargo-cache --locked || true; }
 install_tauri_stack(){ install_apt libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev; has cargo && run cargo install tauri-cli --locked || true; }
 install_security_baseline(){ install_apt ufw fail2ban auditd audispd-plugins apparmor apparmor-utils lynis aide rkhunter chkrootkit clamav clamav-daemon yara openscap-scanner debsecan unattended-upgrades needrestart; }
@@ -104,6 +169,7 @@ install_obsidian_lane(){ mkdir -p "$HOME/forge-os/vaults/forge-operator"/{00-inb
 install_command_center_ux(){
   install_recovery_base
   install_terminal_stack
+  install_river_desktop
   install_zsh_productivity
   install_tui_dev
   install_rich_ui
@@ -118,28 +184,30 @@ custom_menu(){
     echo "Custom module installer"
     echo "1) Recovery base"
     echo "2) Terminal/session stack"
-    echo "3) Desktop/compositor lab"
-    echo "4) Dev runtime"
-    echo "5) Tauri 2 desktop stack"
-    echo "6) Security baseline"
-    echo "7) Repo/secrets/code scanners"
-    echo "8) Web security lab tools"
-    echo "9) AI SDK stack"
-    echo "10) Browser automation"
-    echo "11) Obsidian knowledge vault"
-    echo "12) ZSH productivity shell"
-    echo "13) Bubble Tea/Lip Gloss Go TUI stack"
-    echo "14) Python Rich/Textual color UI stack"
-    echo "15) Full Command Center UX stack"
-    echo "16) Back"
+    echo "3) River desktop"
+    echo "4) River desktop + tty1 autostart"
+    echo "5) Dev runtime"
+    echo "6) Tauri 2 desktop stack"
+    echo "7) Security baseline"
+    echo "8) Repo/secrets/code scanners"
+    echo "9) Web security lab tools"
+    echo "10) AI SDK stack"
+    echo "11) Browser automation"
+    echo "12) Obsidian knowledge vault"
+    echo "13) ZSH productivity shell"
+    echo "14) Bubble Tea/Lip Gloss Go TUI stack"
+    echo "15) Python Rich/Textual color UI stack"
+    echo "16) Full Command Center UX stack"
+    echo "17) Run River doctor"
+    echo "18) Back"
     read -rp "Select module: " choice
     case "$choice" in
-      1) install_recovery_base; pause;; 2) install_terminal_stack; pause;; 3) install_desktop_lab; pause;; 4) install_dev_runtime; pause;; 5) install_tauri_stack; pause;; 6) install_security_baseline; pause;; 7) install_repo_scanners; pause;; 8) install_websec_lab; pause;; 9) install_ai_sdk_stack; pause;; 10) install_browser_automation; pause;; 11) install_obsidian_lane; pause;; 12) install_zsh_productivity; pause;; 13) install_tui_dev; pause;; 14) install_rich_ui; pause;; 15) install_command_center_ux; pause;; 16) return;; *) echo "Invalid choice"; sleep 1;;
+      1) install_recovery_base; pause;; 2) install_terminal_stack; pause;; 3) install_river_desktop; pause;; 4) install_river_autostart; pause;; 5) install_dev_runtime; pause;; 6) install_tauri_stack; pause;; 7) install_security_baseline; pause;; 8) install_repo_scanners; pause;; 9) install_websec_lab; pause;; 10) install_ai_sdk_stack; pause;; 11) install_browser_automation; pause;; 12) install_obsidian_lane; pause;; 13) install_zsh_productivity; pause;; 14) install_tui_dev; pause;; 15) install_rich_ui; pause;; 16) install_command_center_ux; pause;; 17) "$HOME/.local/bin/forge-river-doctor" || true; pause;; 18) return;; *) echo "Invalid choice"; sleep 1;;
     esac
   done
 }
 
-install_hp14_lab(){ install_recovery_base; install_terminal_stack; install_desktop_lab; install_dev_runtime; install_tauri_stack; install_browser_automation; install_obsidian_lane; }
+install_hp14_lab(){ install_recovery_base; install_terminal_stack; install_river_desktop; install_dev_runtime; install_tauri_stack; install_browser_automation; install_obsidian_lane; }
 install_ghostnode_workstation(){ install_hp14_lab; install_security_baseline; install_repo_scanners; install_ai_sdk_stack; install_command_center_ux; }
 
 main_menu(){
@@ -154,11 +222,14 @@ main_menu(){
     echo "7) Copy terminal configs"
     echo "8) Enable observability timers"
     echo "9) Install Command Center UX stack"
-    echo "10) Launch Forge TUI if installed"
-    echo "11) Exit"
+    echo "10) River desktop auto-install"
+    echo "11) River desktop + tty1 autostart"
+    echo "12) Run River doctor"
+    echo "13) Launch Forge TUI if installed"
+    echo "14) Exit"
     read -rp "Choose: " choice
     case "$choice" in
-      1) preflight;; 2) install_recovery_base; pause;; 3) install_hp14_lab; pause;; 4) install_ghostnode_workstation; pause;; 5) custom_menu;; 6) show_manifests;; 7) copy_configs; pause;; 8) enable_timers; pause;; 9) install_command_center_ux; pause;; 10) if has forge-tui; then forge-tui; else echo "forge-tui not installed yet. Run option 9 first."; pause; fi;; 11) exit 0;; *) echo "Invalid choice"; sleep 1;;
+      1) preflight;; 2) install_recovery_base; pause;; 3) install_hp14_lab; pause;; 4) install_ghostnode_workstation; pause;; 5) custom_menu;; 6) show_manifests;; 7) copy_configs; pause;; 8) enable_timers; pause;; 9) install_command_center_ux; pause;; 10) install_river_desktop; pause;; 11) install_river_autostart; pause;; 12) install_scripts; "$HOME/.local/bin/forge-river-doctor" || true; pause;; 13) if has forge-tui; then forge-tui; else echo "forge-tui not installed yet. Run option 9 first."; pause; fi;; 14) exit 0;; *) echo "Invalid choice"; sleep 1;;
     esac
   done
 }
