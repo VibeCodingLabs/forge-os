@@ -1,0 +1,61 @@
+openapi: 3.1.0
+info:
+  title: ForgeOS LLM Routing API
+  version: 0.1.0
+paths:
+  /health:
+    get:
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Health status
+  /providers:
+    get:
+      operationId: listProviders
+      responses:
+        '200':
+          description: Provider list
+  /models:
+    get:
+      operationId: listModels
+      responses:
+        '200':
+          description: Model list
+  /usage/daily:
+    get:
+      operationId: getDailyUsage
+      responses:
+        '200':
+          description: Daily usage
+  /usage/monthly:
+    get:
+      operationId: getMonthlyUsage
+      responses:
+        '200':
+          description: Monthly usage
+  /route:
+    post:
+      operationId: selectRoute
+      responses:
+        '200':
+          description: Selected route
+components:
+  schemas:
+    RouteRequest:
+      type: object
+      properties:
+        capability:
+          type: string
+        context_tokens:
+          type: integer
+        budget_policy:
+          type: string
+    RouteResponse:
+      type: object
+      properties:
+        provider_id:
+          type: string
+        model_id:
+          type: string
+        reason:
+          type: string
