@@ -1,0 +1,26 @@
+version: 0.1.0
+name: sdk-factory
+summary: Generate SDKs and server/client code from OpenAPI.
+
+source:
+  openapi: contracts/openapi.yaml
+  generator_matrix: forgeos/wrappers/pi-contract-wrapper/openapi-generator.matrix.yaml
+
+targets:
+  - typescript_fetch_client
+  - go_client
+  - python_client
+  - go_server_stub
+
+steps:
+  - validate_openapi
+  - select_generator_target
+  - generate_sdk_or_stub
+  - inspect_generated_output
+  - record_generated_files
+  - update_progress
+
+rules:
+  openapi_is_authority: true
+  do_not_handwrite_sdk_methods_that_should_be_generated: true
+  generated_output_goes_under_generated_directory: true
