@@ -1,0 +1,54 @@
+version: 0.1.0
+name: pi-contract-wrapper
+summary: Contract-first wrapper profile for running Pi inside ForgeOS.
+
+agent:
+  runtime: pi
+  model_profile: forgeos/integrations/pi-runpod-vllm/config/pi.runpod.example.json
+  system_prompt: forgeos/wrappers/pi-contract-wrapper/prompts/pi-contract-system.md
+
+contracts:
+  required:
+    schema_sql: contracts/schema.sql
+    openapi: contracts/openapi.yaml
+    arazzo: contracts/arazzo.yaml
+    cobra: contracts/cobra.yaml
+  authority_order:
+    - contracts/schema.sql
+    - contracts/openapi.yaml
+    - contracts/arazzo.yaml
+    - contracts/cobra.yaml
+    - specs/ARCHITECTURE.md
+    - tasks/acceptance-criteria.md
+    - tasks/definition-of-done.md
+
+pipeline:
+  - id: load_context
+    description: Load all contract and spec files into the agent context pack.
+  - id: validate_contracts
+    description: Validate schema, OpenAPI, Arazzo, and Cobra contracts before implementation.
+  - id: plan_vertical_slice
+    description: Build the smallest implementation plan that satisfies the requested workflow.
+  - id: generate_code
+    description: Generate SDKs, server stubs, CLI commands, and workflow helpers from contracts.
+  - id: validate_generated_output
+    description: Confirm generated output still matches contracts.
+  - id: update_progress
+    description: Record files changed, validation results, and next task.
+
+outputs:
+  context_pack: .forgeos/context/pi-contract-context.md
+  generated:
+    sdks: generated/sdks
+    server: generated/server
+    cli: cmd/forge
+    workflows: generated/workflows
+  progress_log: .forgeos/logs/progress.jsonl
+
+rules:
+  contract_first: true
+  gateway_tools_only: true
+  openapi_generator_required_for_sdks: true
+  cobra_contract_required_for_cli: true
+  arazzo_required_for_multi_step_api_workflows: true
+  validation_required_before_complete: true
