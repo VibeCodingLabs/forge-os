@@ -1,0 +1,78 @@
+{
+  "version": "0.1.0",
+  "tools": [
+    {
+      "name": "forge.contracts.validate",
+      "description": "Validate all ForgeOS project contracts and return a structured report.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_root": { "type": "string" }
+        },
+        "required": ["project_root"],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean" },
+          "errors": { "type": "array", "items": { "type": "string" } },
+          "warnings": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["ok", "errors", "warnings"]
+      }
+    },
+    {
+      "name": "forge.openapi.validate",
+      "description": "Validate the OpenAPI 3.1 contract file.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string", "default": "contracts/openapi.yaml" }
+        },
+        "required": ["file"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "forge.sqlite.validate",
+      "description": "Validate the SQLite schema contract file.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string", "default": "contracts/schema.sql" }
+        },
+        "required": ["file"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "forge.taskgraph.build",
+      "description": "Build a task graph from specs, contracts, acceptance criteria, and definition of done.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_root": { "type": "string" },
+          "output": { "type": "string", "default": "tasks/taskgraph.json" }
+        },
+        "required": ["project_root", "output"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "forge.progress.update",
+      "description": "Append a project progress event after an agent task.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_root": { "type": "string" },
+          "summary": { "type": "string" },
+          "status": { "type": "string", "enum": ["planned", "in_progress", "blocked", "complete"] },
+          "files_changed": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["project_root", "summary", "status"],
+        "additionalProperties": false
+      }
+    }
+  ]
+}
