@@ -1,0 +1,24 @@
+(defpoll time :interval "1s" "date '+%I:%M:%S %p'")
+(defpoll date :interval "60s" "date '+%a %b %d'")
+(defpoll cpu :interval "2s" "top -bn1 | awk '/Cpu/ {print int($2+$4) \"%\"}'")
+(defpoll mem :interval "2s" "free | awk '/Mem:/ {print int($3/$2*100) \"%\"}'")
+(defpoll disk :interval "30s" "df -h / | awk 'NR==2 {print $5}'")
+(defpoll net :interval "5s" "nmcli -t -f ACTIVE,SSID dev wifi 2>/dev/null | awk -F: '$1==\"yes\" {print $2; found=1} END {if(!found) print \"offline\"}'")
+
+(defwindow forge-panel
+  :monitor 0
+  :geometry (geometry :x "1%" :y "4%" :width "24%" :height "220px" :anchor "top left")
+  :stacking "fg"
+  :exclusive false
+  :focusable false
+  (box :class "panel" :orientation "v" :space-evenly false
+    (label :class "title" :text "ForgeOS")
+    (label :class "sub" :text "Command Center")
+    (box :class "row" (label :text "Time") (label :text time))
+    (box :class "row" (label :text "Date") (label :text date))
+    (box :class "row" (label :text "CPU") (label :text cpu))
+    (box :class "row" (label :text "RAM") (label :text mem))
+    (box :class "row" (label :text "Disk") (label :text disk))
+    (box :class "row" (label :text "Net") (label :text net))
+    (button :class "button" :onclick "kitty --title agent-workspace tmux new-session -A -s forge-agents" "Agents")
+    (button :class "button" :onclick "kitty --title observability btop" "Observe")))
