@@ -1,0 +1,179 @@
+version: 0.1.0
+project: forge-foundry
+status: planned
+strategy: hybrid_with_phase_0_vertical_spine
+source_docs:
+  - docs/foundry/01_VISION.md
+  - docs/foundry/02_ARCHITECTURE.md
+  - docs/foundry/03_ROADMAP.md
+  - docs/foundry/04_EPICS_TASK_GRAPH.md
+
+epics:
+  - id: E00
+    name: Governance and Repo Standards
+    priority: P0
+    status: planned
+    outcome: Clear docs, registries, schemas, and task conventions.
+    milestones:
+      - id: M00-001
+        name: Canonical docs created
+        acceptance:
+          - Vision, architecture, roadmap, epics, prompt chains, rules, and TODO docs exist.
+          - Machine-readable registries exist.
+      - id: M00-002
+        name: Registry validation planned
+        acceptance:
+          - YAML files have stable IDs.
+          - Validation scripts are specified.
+
+  - id: E01
+    name: ForgeOS Host Runtime
+    priority: P0
+    status: in_progress
+    outcome: Fresh Debian workstation can install ForgeOS command center.
+    milestones:
+      - id: M01-001
+        name: Full command center installer
+        acceptance:
+          - scripts/install-full-command-center.sh runs all core modules.
+          - State and logs are written.
+      - id: M01-002
+        name: Forge TUI command center
+        acceptance:
+          - forge-tui builds.
+          - Install, Desktop, Security, Ops, and Logs screens exist.
+
+  - id: E02
+    name: Observability Center
+    priority: P0
+    status: in_progress
+    outcome: Every meaningful event can be logged locally.
+    milestones:
+      - id: M02-001
+        name: SQLite event ledger
+        acceptance:
+          - observability/schema.sql applies.
+          - events, model_calls, tool_calls, compiler_runs, artifacts, wiki tables exist.
+      - id: M02-002
+        name: CLI event writers
+        acceptance:
+          - forge-event, forge-model-call, forge-tool-call, forge-compile-log, forge-observe exist.
+
+  - id: E03
+    name: Capture Worker Runtime
+    priority: P0
+    status: planned
+    outcome: Authorized URL/workflow traffic can be captured safely.
+    milestones:
+      - id: M03-001
+        name: Capture job schema
+      - id: M03-002
+        name: Playwright capture worker
+      - id: M03-003
+        name: mitmdump capture worker
+      - id: M03-004
+        name: HAR importer
+
+  - id: E04
+    name: SQLite Mirror
+    priority: P0
+    status: planned
+    outcome: Captures become structured local queryable data.
+    milestones:
+      - id: M04-001
+        name: Mirror schema
+      - id: M04-002
+        name: Capture normalizer
+      - id: M04-003
+        name: Mirror query CLI
+
+  - id: E05
+    name: Contract Compiler
+    priority: P1
+    status: planned
+    outcome: Mirrors become OpenAPI, Arazzo, Zod, and Pydantic contracts.
+    milestones:
+      - id: M05-001
+        name: OpenAPI compiler
+      - id: M05-002
+        name: Arazzo compiler
+      - id: M05-003
+        name: Zod and Pydantic compilers
+
+  - id: E06
+    name: Tool Generator
+    priority: P1
+    status: planned
+    outcome: Contracts become CLI, REST, MCP, and SDK tools.
+    milestones:
+      - id: M06-001
+        name: Cobra CLI generator
+      - id: M06-002
+        name: REST wrapper generator
+      - id: M06-003
+        name: FastMCP generator
+
+  - id: E07
+    name: Agent Runtime
+    priority: P1
+    status: planned
+    outcome: PydanticAI agents use local mirrors first.
+    milestones:
+      - id: M07-001
+        name: Mirror-first agent
+      - id: M07-002
+        name: Policy engine
+      - id: M07-003
+        name: Eval harness
+
+  - id: E08
+    name: LLM Wiki
+    priority: P1
+    status: planned
+    outcome: Durable project intelligence survives context resets.
+    milestones:
+      - id: M08-001
+        name: Wiki page schema
+      - id: M08-002
+        name: Wiki indexer
+      - id: M08-003
+        name: Wiki compilers
+
+  - id: E09
+    name: Jetson 24/7 Node
+    priority: P2
+    status: planned
+    outcome: Jetson runs authorized capture and compiler jobs continuously.
+    milestones:
+      - id: M09-001
+        name: Jetson profile
+      - id: M09-002
+        name: Worker scheduler
+      - id: M09-003
+        name: Health reporting
+
+  - id: E10
+    name: Security and Policy
+    priority: P0
+    status: planned
+    outcome: Captures and generated tools are policy-gated and redacted.
+    milestones:
+      - id: M10-001
+        name: Target allowlist
+      - id: M10-002
+        name: Redaction engine
+      - id: M10-003
+        name: Mutating request approval gate
+
+  - id: E11
+    name: Productization
+    priority: P2
+    status: planned
+    outcome: Capture-to-contract runs become monetizable packages.
+    milestones:
+      - id: M11-001
+        name: Deliverable generator
+      - id: M11-002
+        name: Pricing and proposal templates
+      - id: M11-003
+        name: Demo package
