@@ -1,0 +1,23 @@
+version: 0.1.0
+name: arazzo-workflow-factory
+summary: Generate workflow runners, docs, tests, and agent task plans from Arazzo workflows.
+
+source:
+  arazzo: contracts/arazzo.yaml
+  openapi: contracts/openapi.yaml
+  codegen_contract: forgeos/wrappers/pi-contract-wrapper/arazzo.codegen.yaml
+
+steps:
+  - validate_arazzo
+  - validate_operation_id_links
+  - generate_workflow_summary
+  - generate_step_runner
+  - generate_workflow_test_plan
+  - generate_agent_task_plan
+  - update_progress
+
+rules:
+  arazzo_is_authority_for_multi_step_workflows: true
+  workflow_steps_must_map_to_openapi_operation_ids: true
+  missing_operation_ids_require_contract_patch: true
+  workflow_runners_need_replayable_tests: true
