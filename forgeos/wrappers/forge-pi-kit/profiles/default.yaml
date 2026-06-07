@@ -1,0 +1,28 @@
+version: 0.1.0
+name: forge-pi-kit-default
+summary: Default ForgeOS Pi profile pack.
+
+uses:
+  wrapper: forgeos/wrappers/pi-contract-wrapper/wrapper.contract.yaml
+  tool_policy: forgeos/wrappers/pi-contract-wrapper/tool-policy.yaml
+  context_pack: forgeos/wrappers/pi-contract-wrapper/context-pack.md
+
+contracts:
+  required:
+    - contracts/schema.sql
+    - contracts/openapi.yaml
+    - contracts/arazzo.yaml
+    - contracts/cobra.yaml
+
+presets:
+  - forgeos/wrappers/forge-pi-kit/presets/contract-first.yaml
+  - forgeos/wrappers/forge-pi-kit/presets/sdk-factory.yaml
+  - forgeos/wrappers/forge-pi-kit/presets/cobra-cli-factory.yaml
+  - forgeos/wrappers/forge-pi-kit/presets/arazzo-workflow-factory.yaml
+
+agent_rules:
+  context_pack_before_task: true
+  validate_before_generate: true
+  generate_from_contracts: true
+  validate_after_generate: true
+  update_progress: true
