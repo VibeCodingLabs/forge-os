@@ -1,0 +1,103 @@
+version: 0.1.0
+name: forgeos-provider-discovery-matrix
+
+refresh_policy:
+  provider_facts_are_time_sensitive: true
+  require_last_verified_at: true
+  require_source_url: true
+  stale_after_days: 14
+
+provider_categories:
+  direct_sdk:
+    description: Providers supported through a first-party or AI SDK package.
+  openai_compatible:
+    description: Providers reachable through an OpenAI-compatible base URL.
+  local_runtime:
+    description: Local or self-hosted model runtimes.
+
+candidate_providers:
+  - id: openai
+    category: direct_sdk
+    ai_sdk_package: '@ai-sdk/openai'
+    connection_modes: [api_key]
+    discovery_targets: [models, limits, pricing, capabilities]
+
+  - id: anthropic
+    category: direct_sdk
+    ai_sdk_package: '@ai-sdk/anthropic'
+    connection_modes: [api_key]
+    discovery_targets: [models, limits, pricing, capabilities]
+
+  - id: google
+    category: direct_sdk
+    ai_sdk_package: '@ai-sdk/google'
+    connection_modes: [api_key]
+    discovery_targets: [models, limits, pricing, capabilities]
+
+  - id: groq
+    category: direct_sdk
+    ai_sdk_package: '@ai-sdk/groq'
+    connection_modes: [api_key]
+    discovery_targets: [models, free_tier, limits, capabilities]
+
+  - id: xai
+    category: direct_sdk
+    ai_sdk_package: '@ai-sdk/xai'
+    connection_modes: [api_key]
+    discovery_targets: [models, limits, capabilities]
+
+  - id: mistral
+    category: direct_sdk
+    ai_sdk_package: '@ai-sdk/mistral'
+    connection_modes: [api_key]
+    discovery_targets: [models, free_tier, limits, capabilities]
+
+  - id: together
+    category: openai_compatible
+    connection_modes: [api_key, openai_compatible]
+    discovery_targets: [models, free_tier, limits, capabilities]
+
+  - id: fireworks
+    category: openai_compatible
+    connection_modes: [api_key, openai_compatible]
+    discovery_targets: [models, free_tier, limits, capabilities]
+
+  - id: openrouter
+    category: openai_compatible
+    connection_modes: [api_key, openai_compatible]
+    discovery_targets: [models, free_models, limits, capabilities]
+
+  - id: huggingface
+    category: openai_compatible
+    connection_modes: [api_key, openai_compatible]
+    discovery_targets: [inference_providers, models, free_tier, limits, capabilities]
+
+  - id: cerebras
+    category: openai_compatible
+    connection_modes: [api_key, openai_compatible]
+    discovery_targets: [models, free_tier, limits, capabilities]
+
+  - id: runpod_vllm
+    category: openai_compatible
+    connection_modes: [api_key, openai_compatible]
+    discovery_targets: [served_model, endpoint_health, throughput, latency]
+
+  - id: ollama
+    category: local_runtime
+    connection_modes: [local]
+    discovery_targets: [local_models, context_window, capabilities]
+
+normalization_required_fields:
+  - provider_id
+  - model_id
+  - provider_model_id
+  - display_name
+  - free_tier
+  - capabilities
+  - context_window_tokens
+  - supports_tools
+  - supports_structured_output
+  - requests_per_day
+  - requests_per_month
+  - last_verified_at
+  - source_url
