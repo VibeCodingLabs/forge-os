@@ -1,0 +1,29 @@
+{
+  "profile": "pi-runpod-vllm",
+  "provider": "openai-compatible",
+  "base_url_env": "RUNPOD_OPENAI_BASE_URL",
+  "api_key_env": "RUNPOD_API_KEY",
+  "model_env": "RUNPOD_MODEL",
+  "system_prompt_file": "forgeos/integrations/pi-runpod-vllm/prompts/forgeos-system-prompt.md",
+  "tool_gateway": {
+    "url_env": "FORGEOS_TOOL_GATEWAY_URL",
+    "tools_file": "forgeos/tool-gateway/tools.json",
+    "permissions_file": "forgeos/tool-gateway/permissions.yaml",
+    "tool_execution_mode": "gateway_allowlist_only"
+  },
+  "required_context_files": [
+    "specs/PROJECT_OVERVIEW.md",
+    "specs/ARCHITECTURE.md",
+    "contracts/openapi.yaml",
+    "contracts/schema.sql",
+    "tasks/acceptance-criteria.md",
+    "tasks/definition-of-done.md"
+  ],
+  "runtime_rules": {
+    "use_contracts_as_source_of_truth": true,
+    "validate_api_and_database_contracts_before_changes": true,
+    "use_only_declared_gateway_tools": true,
+    "request_review_before_contract_updates": true,
+    "update_progress_after_task": true
+  }
+}
