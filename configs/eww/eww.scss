@@ -1,0 +1,42 @@
+* {
+  all: unset;
+  font-family: "JetBrains Mono", "FiraCode Nerd Font", monospace;
+}
+
+.panel {
+  background: rgba(17, 17, 17, 0.94);
+  border: 1px solid rgba(216, 129, 112, 0.55);
+  border-radius: 16px;
+  padding: 16px;
+  color: #eceff4;
+}
+
+.title {
+  color: #d08770;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.sub {
+  color: #81a1c1;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.row {
+  padding: 4px 0;
+  color: #d8dee9;
+}
+
+.button {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: #2e3440;
+  border-radius: 10px;
+  color: #eceff4;
+}
+
+.button:hover {
+  background: #d08770;
+  color: #111111;
+}
