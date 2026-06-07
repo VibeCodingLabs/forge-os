@@ -1,0 +1,168 @@
+version: 0.1.0
+project: forge-foundry
+status: planned
+source_doc: docs/foundry/05_PROMPT_CHAINS.md
+
+prompt_chains:
+  - id: CHAIN-RESEARCH-001
+    name: Research Official Docs
+    owner_agent: scout
+    priority: P0
+    status: planned
+    inputs: [tools, versions, target_question]
+    outputs:
+      - raw/research/{topic}.md
+      - wiki/research/{topic}.md
+    events:
+      - research.docs.completed
+    gates:
+      - official_sources_preferred
+      - citations_required
+
+  - id: CHAIN-CAPTURE-PLAN-001
+    name: Capture Planning
+    owner_agent: scout
+    priority: P0
+    status: planned
+    inputs: [target_url, authorization_scope]
+    outputs:
+      - generated/capture-plans/{target_slug}.md
+      - raw/manifests/{target_slug}.capture.json
+    events:
+      - capture.plan.created
+    gates:
+      - authorization_required
+      - redaction_plan_required
+
+  - id: CHAIN-NORMALIZE-001
+    name: HAR Flow Normalization
+    owner_agent: compiler
+    priority: P0
+    status: planned
+    inputs: [artifact_path, capture_id]
+    outputs:
+      - generated/normalized/{capture_id}.endpoints.json
+      - sqlite.endpoint_rows
+    events:
+      - capture.normalized
+    gates:
+      - sensitive_fields_flagged
+      - noisy_assets_filtered
+
+  - id: CHAIN-OPENAPI-001
+    name: OpenAPI Compiler
+    owner_agent: compiler
+    priority: P0
+    status: planned
+    inputs: [site_id, endpoint_rows]
+    outputs:
+      - generated/openapi/{site_slug}.openapi.yaml
+      - generated/reports/{site_slug}.openapi-report.md
+    events:
+      - compiler.openapi.completed
+    gates:
+      - openapi_validates
+      - source_mapping_required
+
+  - id: CHAIN-SCHEMA-001
+    name: Zod and Pydantic Schema Mirror
+    owner_agent: compiler
+    priority: P1
+    status: planned
+    inputs: [contract_path]
+    outputs:
+      - generated/zod/{site_slug}/
+      - generated/pydantic/{site_slug}/
+    events:
+      - compiler.schemas.completed
+    gates:
+      - generated_code_imports
+      - examples_validate
+
+  - id: CHAIN-COBRA-001
+    name: Cobra CLI Generator
+    owner_agent: compiler
+    priority: P1
+    status: planned
+    inputs: [site_slug, contract_path, mirror_path]
+    outputs:
+      - generated/cobra/{site_slug}/
+    events:
+      - compiler.cobra.completed
+    gates:
+      - generated_cli_builds
+      - mirror_query_command_exists
+
+  - id: CHAIN-MCP-001
+    name: FastMCP Tool Generator
+    owner_agent: compiler
+    priority: P1
+    status: planned
+    inputs: [site_slug, mirror_path]
+    outputs:
+      - generated/mcp/{site_slug}/
+    events:
+      - compiler.mcp.completed
+    gates:
+      - mcp_server_starts
+      - mirror_tool_returns_result
+
+  - id: CHAIN-MIRROR-FIRST-REVIEW-001
+    name: Mirror First Agent Review
+    owner_agent: analyst
+    priority: P1
+    status: planned
+    inputs: [run_id]
+    outputs:
+      - generated/reports/{run_id}.mirror-first-review.md
+    events:
+      - eval.mirror_first.completed
+    gates:
+      - tool_log_inspected
+      - raw_artifact_reads_checked
+
+  - id: CHAIN-WIKI-001
+    name: LLM Wiki Update
+    owner_agent: archivist
+    priority: P1
+    status: planned
+    inputs: [run_id, artifact_ids]
+    outputs:
+      - wiki/generated/
+      - sqlite.wiki_pages
+      - sqlite.wiki_edges
+    events:
+      - wiki.update.completed
+    gates:
+      - frontmatter_required
+      - source_links_required
+
+  - id: CHAIN-MONETIZATION-001
+    name: Monetization Package Generator
+    owner_agent: product-strategist
+    priority: P2
+    status: planned
+    inputs: [site_slug, capture_summary, generated_assets]
+    outputs:
+      - generated/monetization/{site_slug}.package.md
+    events:
+      - monetization.package.generated
+    gates:
+      - client_value_clear
+      - risks_documented
+
+  - id: CHAIN-SECURITY-001
+    name: Security Review
+    owner_agent: security-engineer
+    priority: P0
+    status: planned
+    inputs: [artifact_or_run_id]
+    outputs:
+      - generated/security/{id}.review.md
+    events:
+      - security.review.completed
+    gates:
+      - authorization_checked
+      - secrets_checked
+      - redaction_checked
+      - approval_or_block_verdict
