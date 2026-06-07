@@ -1,0 +1,30 @@
+version: 0.1.0
+name: oh-my-pi-runpod-vllm
+summary: Pi profile for ForgeOS using RunPod vLLM through an OpenAI-compatible API.
+
+extends: forgeos/wrappers/oh-my-pi/profiles/default.yaml
+
+model_backend:
+  provider: runpod
+  api_shape: openai-compatible
+  env_file_template: forgeos/integrations/pi-runpod-vllm/.env.example
+  config_template: forgeos/integrations/pi-runpod-vllm/config/pi.runpod.example.json
+
+system_prompts:
+  - forgeos/integrations/pi-runpod-vllm/prompts/forgeos-system-prompt.md
+  - forgeos/wrappers/pi-contract-wrapper/prompts/pi-contract-system.md
+  - forgeos/wrappers/oh-my-pi/prompts/oh-my-pi.md
+
+required_gateway:
+  tools: forgeos/tool-gateway/tools.json
+  permissions: forgeos/tool-gateway/permissions.yaml
+  openapi: forgeos/tool-gateway/openapi.yaml
+
+workflow:
+  - load_oh_my_pi_profile
+  - compile_context_pack
+  - validate_contracts
+  - plan_task
+  - generate_from_contracts
+  - validate_output
+  - update_progress
