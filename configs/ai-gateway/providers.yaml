@@ -1,0 +1,63 @@
+# Forge AI Gateway provider registry
+# Secrets are read from environment variables only. Never store API keys here.
+
+providers:
+  - id: ollama
+    name: Ollama Local
+    auth_type: none
+    base_url: http://127.0.0.1:11434
+    env_key: null
+    docs_url: https://ollama.com
+    enabled: true
+    priority: 10
+    notes: Local-first fallback for cheap/simple work.
+
+  - id: openrouter
+    name: OpenRouter
+    auth_type: api_key
+    base_url: https://openrouter.ai/api/v1
+    env_key: OPENROUTER_API_KEY
+    docs_url: https://openrouter.ai/docs
+    enabled: false
+    priority: 30
+    notes: Aggregator for free and paid models. Free limits change often.
+
+  - id: groq
+    name: Groq
+    auth_type: api_key
+    base_url: https://api.groq.com/openai/v1
+    env_key: GROQ_API_KEY
+    docs_url: https://console.groq.com/docs
+    enabled: false
+    priority: 40
+    notes: Fast inference provider; quota must be refreshed from provider docs/API.
+
+  - id: cerebras
+    name: Cerebras
+    auth_type: api_key
+    base_url: https://api.cerebras.ai/v1
+    env_key: CEREBRAS_API_KEY
+    docs_url: https://inference-docs.cerebras.ai
+    enabled: false
+    priority: 40
+    notes: Fast inference provider; quota must be refreshed from provider docs/API.
+
+  - id: google
+    name: Google Gemini
+    auth_type: api_key
+    base_url: https://generativelanguage.googleapis.com
+    env_key: GOOGLE_GENERATIVE_AI_API_KEY
+    docs_url: https://ai.google.dev
+    enabled: false
+    priority: 50
+    notes: Good free-tier candidate when available; limits change by region/account.
+
+  - id: huggingface
+    name: Hugging Face Inference
+    auth_type: api_key
+    base_url: https://api-inference.huggingface.co
+    env_key: HF_TOKEN
+    docs_url: https://huggingface.co/docs/api-inference
+    enabled: false
+    priority: 60
+    notes: Useful for community models and embeddings depending on account limits.
