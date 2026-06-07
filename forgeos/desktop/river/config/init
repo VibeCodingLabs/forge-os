@@ -1,0 +1,55 @@
+#!/bin/sh
+
+# ForgeOS starter River config
+# Copy to ~/.config/river/init and make executable.
+
+# Terminal
+riverctl map normal Super Return spawn foot
+
+# Launcher
+riverctl map normal Super D spawn wmenu-run
+
+# Close focused view
+riverctl map normal Super Q close
+
+# Exit River
+riverctl map normal Super+Shift E exit
+
+# Focus movement
+riverctl map normal Super H focus-view left
+riverctl map normal Super J focus-view down
+riverctl map normal Super K focus-view up
+riverctl map normal Super L focus-view right
+
+# Move views
+riverctl map normal Super+Shift H swap left
+riverctl map normal Super+Shift J swap down
+riverctl map normal Super+Shift K swap up
+riverctl map normal Super+Shift L swap right
+
+# Layout controls
+riverctl map normal Super Space zoom
+riverctl map normal Super F toggle-fullscreen
+riverctl map normal Super+Shift Space toggle-float
+
+# Tags 1-9
+for i in 1 2 3 4 5 6 7 8 9
+ do
+  tags=$((1 << ($i - 1)))
+  riverctl map normal Super $i set-focused-tags $tags
+  riverctl map normal Super+Shift $i set-view-tags $tags
+ done
+
+# Pointer behavior
+riverctl map-pointer normal Super BTN_LEFT move-view
+riverctl map-pointer normal Super BTN_RIGHT resize-view
+
+# Default layout generator
+riverctl default-layout rivertile
+rivertile -view-padding 6 -outer-padding 6 &
+
+# Notifications if installed
+command -v mako >/dev/null 2>&1 && mako &
+
+# Idle background placeholder
+# Add kanshi, waybar, swaybg, or custom ForgeOS status bar later.
