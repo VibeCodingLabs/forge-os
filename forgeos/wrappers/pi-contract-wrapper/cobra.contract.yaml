@@ -1,0 +1,85 @@
+version: 0.1.0
+name: forgeos-cobra-contract
+language: go
+framework: cobra
+
+module:
+  import_path: github.com/VibeCodingLabs/forge-os
+  main_package: cmd/forge
+
+root_command:
+  use: forge
+  short: ForgeOS command center
+  long: Contract-first CLI for ForgeOS automation, generation, validation, and agent workflows.
+
+commands:
+  - use: contracts
+    short: Manage ForgeOS contracts
+    subcommands:
+      - use: validate
+        short: Validate schema, OpenAPI, Arazzo, and Cobra contracts
+        tool: forge.contracts.validate
+        flags:
+          - name: project-root
+            shorthand: r
+            type: string
+            default: .
+
+  - use: generate
+    short: Generate code from contracts
+    subcommands:
+      - use: sdk
+        short: Generate SDKs from OpenAPI
+        tool: forge.openapi.generate_sdk
+        flags:
+          - name: language
+            shorthand: l
+            type: string
+            required: true
+          - name: output
+            shorthand: o
+            type: string
+            default: generated/sdks
+
+      - use: server
+        short: Generate server scaffold from OpenAPI
+        tool: forge.openapi.generate_server
+        flags:
+          - name: language
+            shorthand: l
+            type: string
+            default: go
+          - name: output
+            shorthand: o
+            type: string
+            default: generated/server
+
+      - use: workflow
+        short: Generate workflow runner from Arazzo
+        tool: forge.arazzo.generate_runner
+        flags:
+          - name: workflow
+            shorthand: w
+            type: string
+            required: true
+
+  - use: pi
+    short: Run Pi through the ForgeOS contract wrapper
+    subcommands:
+      - use: run
+        short: Run a contract-scoped Pi task
+        tool: forge.pi.run_contract_task
+        flags:
+          - name: task
+            shorthand: t
+            type: string
+            required: true
+          - name: profile
+            shorthand: p
+            type: string
+            default: pi-runpod-vllm
+
+validation:
+  require_command_tool_mapping: true
+  require_flags_for_inputs: true
+  require_progress_update: true
