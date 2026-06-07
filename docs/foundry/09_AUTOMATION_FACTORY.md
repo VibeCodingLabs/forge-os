@@ -15,6 +15,11 @@ capture
   -> mirror
   -> contract
   -> tools
+  -> MCPs
+  -> Python scripts
+  -> Go scripts
+  -> Rust sidecars
+  -> Tauri v2 GUI
   -> agents
   -> skills
   -> sub-agents
@@ -43,9 +48,18 @@ The final product is an automation surface that can execute useful work repeated
 A generated OpenAPI spec is useful.
 A generated CLI is useful.
 A generated MCP server is useful.
+A generated Python script is useful.
+A generated Go command is useful.
+A generated Rust sidecar is useful.
+A generated Tauri v2 GUI is useful.
 
 But the real leverage comes when those pieces become:
 
+- MCP servers and tools
+- Python automation scripts
+- Go CLIs and daemon utilities
+- Rust sidecars controlled by Tauri
+- Tauri v2 desktop dashboards
 - agent skills
 - scheduled jobs
 - PR bots
@@ -69,11 +83,138 @@ Examples:
 - MCP tools
 - SDK functions
 - shell commands
+- Python scripts
+- Go scripts
+- Rust sidecars
 - Tauri commands
 - Hono routes
 - FastAPI routes
 
-### 3.2 Agents
+### 3.2 MCPs
+
+Examples:
+
+- FastMCP mirror-query server
+- MCP resources over artifacts
+- MCP prompts for workflow execution
+- MCP tools for generated API wrappers
+- MCP tools for wiki lookup
+- MCP tools for observability queries
+- MCP tools for capture job submission
+- MCP tools for GitHub issue/PR automation
+
+Each MCP should include:
+
+- server name
+- transport mode
+- tool list
+- resource list
+- prompt list
+- input schemas
+- output schemas
+- policy gates
+- logging hooks
+- example calls
+- tests
+
+### 3.3 Python Scripts
+
+Examples:
+
+- HAR importer
+- mitmproxy flow parser
+- schema inference worker
+- Pydantic model generator
+- wiki page generator
+- capture normalizer
+- redaction scanner
+- embedding/index worker
+- PydanticAI agent runner
+- report generator
+
+Python scripts are best for:
+
+- data parsing
+- AI/LLM integrations
+- Pydantic validation
+- quick workers
+- notebooks/prototyping
+- compiler glue
+
+### 3.4 Go Scripts and CLIs
+
+Examples:
+
+- Cobra command tree
+- mirror query CLI
+- capture job CLI
+- validation CLI
+- local API server
+- worker supervisor
+- log tailer
+- GitHub issue triage CLI
+- generated API command wrapper
+
+Go is best for:
+
+- single-binary tools
+- fast CLIs
+- long-running lightweight daemons
+- cross-platform operators
+- strict operational tooling
+
+### 3.5 Rust Sidecars
+
+Examples:
+
+- secure command runner
+- sandbox launcher
+- file watcher
+- high-performance log ingester
+- local SQLite service
+- Tauri-managed worker process
+- browser session supervisor
+- system telemetry collector
+
+Rust sidecars are best for:
+
+- process control
+- system integration
+- performance-sensitive workers
+- safer long-running local services
+- Tauri backend extensions
+
+### 3.6 Tauri v2 GUI
+
+Examples:
+
+- local command center dashboard
+- capture job manager
+- endpoint/mirror browser
+- OpenAPI/Arazzo viewer
+- tool/MCP registry viewer
+- agent run viewer
+- observability dashboard
+- wiki browser
+- artifact browser
+- generated app launcher
+- settings/policy manager
+
+The Tauri v2 GUI should not do heavy work directly.
+
+It should orchestrate:
+
+- Rust commands
+- Rust sidecars
+- Python workers
+- Go CLIs
+- MCP servers
+- REST APIs
+- SQLite queries
+- systemd timers
+- logs and artifacts
+
+### 3.7 Agents
 
 Examples:
 
@@ -86,7 +227,7 @@ Examples:
 - support agents
 - sales/package agents
 
-### 3.3 Skills
+### 3.8 Skills
 
 Examples:
 
@@ -94,6 +235,10 @@ Examples:
 - `mirror-api`
 - `generate-openapi`
 - `generate-mcp`
+- `generate-python-script`
+- `generate-go-cli`
+- `generate-rust-sidecar`
+- `generate-tauri-panel`
 - `triage-issues`
 - `review-pr`
 - `summarize-run`
@@ -113,7 +258,7 @@ Each skill should include:
 - examples
 - acceptance criteria
 
-### 3.4 Sub-Agents
+### 3.9 Sub-Agents
 
 Examples:
 
@@ -125,8 +270,12 @@ Examples:
 - Security checks redaction and policy.
 - Archivist updates the wiki.
 - Operator executes approved commands.
+- Sidecar Engineer builds Rust sidecars.
+- UI Engineer builds Tauri v2 panels.
+- CLI Engineer builds Cobra/Go commands.
+- Python Worker Engineer builds Pydantic/Python workers.
 
-### 3.5 Cronjobs and Timers
+### 3.10 Cronjobs and Timers
 
 Examples:
 
@@ -138,7 +287,7 @@ Examples:
 - token usage report
 - stale mirror detection
 
-### 3.6 Watchdogs and Heartbeats
+### 3.11 Watchdogs and Heartbeats
 
 Examples:
 
@@ -150,8 +299,10 @@ Examples:
 - Redis/Qdrant health watchdog
 - API gateway health watchdog
 - MCP server health watchdog
+- Rust sidecar health watchdog
+- Tauri app health watchdog
 
-### 3.7 GitHub Actions
+### 3.12 GitHub Actions
 
 Examples:
 
@@ -160,11 +311,13 @@ Examples:
 - run schema tests
 - run generated CLI build
 - run generated Python import tests
+- run generated Rust sidecar build
+- run generated Tauri frontend typecheck
 - run redaction tests
 - run docs link checks
 - create artifact bundles
 
-### 3.8 Issue Triage and PR Automation
+### 3.13 Issue Triage and PR Automation
 
 Examples:
 
@@ -176,11 +329,11 @@ Examples:
 - review PRs against contracts
 - block PRs with missing docs/tests/logging
 
-### 3.9 Applications
+### 3.14 Applications
 
 Examples:
 
-- local Tauri dashboard
+- local Tauri v2 dashboard
 - web dashboard
 - internal API explorer
 - workflow builder
@@ -196,12 +349,18 @@ Capture Plane
   -> Mirror Plane
     -> Contract Plane
       -> Tool Plane
-        -> Agent Plane
-          -> Automation Plane
-            -> Product Plane
+        -> Script / MCP / Sidecar Plane
+          -> Agent Plane
+            -> Automation Plane
+              -> GUI / Application Plane
+                -> Product Plane
 ```
 
 The Automation Plane is where generated capabilities become repeatable systems.
+
+The Script / MCP / Sidecar Plane is where generated contracts become executable local capabilities.
+
+The GUI / Application Plane is where Tauri v2 and web dashboards expose those capabilities to humans.
 
 ## 5. Automation Manifest
 
@@ -215,6 +374,12 @@ status: draft
 source_contract: generated/openapi/example.openapi.yaml
 source_mirror: mirrors/example.sqlite
 owner_agent: watcher
+runtime_targets:
+  - mcp
+  - python_script
+  - go_cli
+  - rust_sidecar
+  - tauri_v2_gui
 triggers:
   - github.issue.opened
 inputs:
@@ -250,6 +415,8 @@ Generated automations must be:
 - linked to source mirrors
 - linked to owner agents
 - connected to acceptance criteria
+- exposed through the appropriate runtime target
+- compatible with the Tauri v2 command center when GUI control is needed
 
 ## 7. Maximum Leverage Sequence
 
@@ -259,13 +426,17 @@ The best execution order is:
 1. Mirror query tools
 2. Contract generators
 3. MCP wrappers
-4. Agent skills
-5. Scheduled jobs
-6. Watchdogs/heartbeats
-7. GitHub issue/PR automations
-8. Code review automations
-9. Dashboards/apps
-10. Monetization deliverables
+4. Python worker scripts
+5. Go CLI commands
+6. Rust sidecars
+7. Tauri v2 GUI panels
+8. Agent skills
+9. Scheduled jobs
+10. Watchdogs/heartbeats
+11. GitHub issue/PR automations
+12. Code review automations
+13. Dashboards/apps
+14. Monetization deliverables
 ```
 
 ## 8. Definition of Done for an Automation
@@ -276,6 +447,7 @@ An automation is not complete unless:
 - inputs are typed
 - outputs are typed
 - policy is defined
+- runtime target is declared
 - logs are emitted
 - failure mode is documented
 - manual override exists
@@ -283,9 +455,21 @@ An automation is not complete unless:
 - owner agent is defined
 - source mirror/contract is linked
 - docs and examples exist
+- if GUI-controlled, Tauri v2 integration notes exist
+- if sidecar-backed, process lifecycle and health checks exist
 
-## 9. Final Pipeline Statement
+## 9. Runtime Target Decision Matrix
+
+| Runtime Target | Use For | Avoid For |
+|---|---|---|
+| MCP | Agent/tool interoperability, mirror queries, generated API tools | Heavy local process control |
+| Python script | parsing, AI workers, Pydantic, compilers, reports | tiny static binaries or privileged process control |
+| Go script/CLI | Cobra commands, validation, local servers, ops tools | complex UI or deep desktop integration |
+| Rust sidecar | secure process control, watchers, performance, Tauri backend workers | fast prototyping or large ML libraries |
+| Tauri v2 GUI | human command center, dashboards, settings, approvals | direct heavy scraping/capture work |
+
+## 10. Final Pipeline Statement
 
 Forge Foundry does not stop at tools.
 
-Forge Foundry turns captures into mirrors, mirrors into contracts, contracts into tools, tools into agents and skills, and agents into scheduled, observable, reviewable automations that can build applications, manage repositories, triage work, review code, generate deliverables, and create monetizable systems.
+Forge Foundry turns captures into mirrors, mirrors into contracts, contracts into MCPs, scripts, CLIs, sidecars, GUIs, tools, agents, skills, scheduled jobs, review systems, applications, and monetizable automation products.
