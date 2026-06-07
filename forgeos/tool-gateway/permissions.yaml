@@ -1,0 +1,50 @@
+version: 0.1.0
+mode: conservative
+
+project_scope:
+  root_env: FORGEOS_PROJECT_ROOT
+  default_root: .
+
+redaction:
+  enabled: true
+  redact_common_api_keys: true
+
+file_access:
+  read_allow:
+    - specs/**
+    - contracts/**
+    - tasks/**
+    - forgeos/**
+    - README.md
+  write_allow:
+    - tasks/**
+    - .forgeos/logs/**
+  review_required:
+    - contracts/**
+    - specs/**
+
+tools:
+  forge.contracts.validate:
+    enabled: true
+    writes: false
+  forge.openapi.validate:
+    enabled: true
+    writes: false
+  forge.sqlite.validate:
+    enabled: true
+    writes: false
+  forge.taskgraph.build:
+    enabled: true
+    writes: true
+  forge.progress.update:
+    enabled: true
+    writes: true
+
+network:
+  default: false
+  allowed_profiles:
+    - runpod_vllm_endpoint
+
+shell:
+  default: false
+  notes: "Add individual adapters later as named, schema-validated gateway tools."
