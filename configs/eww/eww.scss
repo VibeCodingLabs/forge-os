@@ -40,3 +40,36 @@
   background: #d08770;
   color: #111111;
 }
+
+.accent {
+  border: 1px solid rgba(216, 129, 112, 0.5);
+}
+
+.cheats-menu {
+  margin-top: 8px;
+  padding: 8px;
+  background: rgba(8, 8, 8, 0.72);
+  border: 1px solid rgba(129, 161, 193, 0.35);
+  border-radius: 12px;
+}
+
+.cheats-title {
+  color: #d08770;
+  font-size: 11px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.cheat-item {
+  margin-top: 4px;
+  padding: 6px 8px;
+  background: rgba(46, 52, 64, 0.88);
+  border-radius: 8px;
+  color: #d8dee9;
+  font-size: 11px;
+}
+
+.cheat-item:hover {
+  background: #81a1c1;
+  color: #111111;
+}
